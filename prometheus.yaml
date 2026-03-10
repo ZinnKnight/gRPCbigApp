@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 1m
+
+scrape_config:
+  - job_name: 'grpc'
+    static_config:
+      - targets: ['order-service:50051','spot-instrument-service:50052']
