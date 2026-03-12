@@ -8,8 +8,6 @@ import (
 )
 
 func TestViewMarketsReturns(t *testing.T) {
-	marketTest.NewMarketService()
-
 	service := marketTest.NewMarketService()
 
 	response, err := service.ViewMarkets(
@@ -23,8 +21,7 @@ func TestViewMarketsReturns(t *testing.T) {
 
 	for _, m := range response.Markets {
 		if !m.Enable {
-			t.Errorf("Данный маркет недоступен: %v", err)
+			t.Errorf("Данный маркет недоступен: %v", m)
 		}
 	}
-
 }

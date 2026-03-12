@@ -1,20 +1,19 @@
-version: '3.9'
 
 services:
 
   postgres:
-    image: postgres:18-alpine3.22-dev
+    image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
       #я знаю что так нельзя хранить имя и пароль, тем более передавать в виде файлов, но проект маленький
       # и переусложнять его такими штуками как правильное сохранение секретов и т.д - мне показалось излишним
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DM: gRPCbigAppDB
+      POSTGRES_DB: gRPCbigApp
     ports:
       - "5432:5432"
 
   redis:
-    image: redis:8-debian13-dev
+    image: redis:7-alpine
     ports:
       - "6379:6379"
 
@@ -22,11 +21,14 @@ services:
     image: jaegertracing/all-in-one:1.54
     ports:
       - "16686:16686"
+      - "14268:14268"
 
   prometheus:
     image: prom/prometheus
     volumes:
-      - #тут прсто примастил на сам контейнер, если создавать как сохранение ещё куда-то то могу потупить чуть подольше
-      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yaml:etc/prometheus/prometheus.yaml
     ports:
       - "9090:9090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway" #вот тут вопрос кстати, по идее это привязывает нас к хост машине, ну а раз ты поднимаешь то всё ое
+# но с другой стороны я видел что можно через такую штуку прокидывать домены, довольно прекольно

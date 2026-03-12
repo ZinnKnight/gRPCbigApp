@@ -11,11 +11,11 @@ import (
 
 type MockDB struct{}
 
-func (mdb *MockDB) Create(ctx context.Context, od domain.OrderDomain) error {
+func (mdb *MockDB) Create(ctx context.Context, od *domain.OrderDomain) error {
 	return nil
 }
 
-func (mdb *MockDB) GetOrderSatus(ctx context.Context, id string) (string, error) {
+func (mdb *MockDB) GetStatus(ctx context.Context, id string) (string, error) {
 	// если правильно понимаю, то тут мы тестируем именно возможность взятия по Get, поэтому прописал как заглушку "создан"
 	return "Создан", nil
 }
@@ -34,7 +34,7 @@ func TestCreateOrder(t *testing.T) {
 		UserRole:  "user",
 	}
 
-	response, err := &service.CreateOrder(context.Background(), req)
+	response, err := service.CreateOrder(context.Background(), req)
 
 	if err != nil {
 		t.Fatalf("неизвестная ошибка: %v", err)

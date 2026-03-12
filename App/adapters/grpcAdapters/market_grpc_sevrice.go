@@ -13,13 +13,7 @@ type MarketService struct {
 }
 
 func NewMarketService() *MarketService {
-
-	markets := map[string]domain.MarketDomain{
-		"Некий_Товар1": {GoodsId: "НекийТовар1", MarketID: "Некий-Ecomerce1", Accessibility: true},
-		"Некий_Товар2": {GoodsId: "НекийТовар2", MarketID: "Некий-Ecomerce2", Accessibility: false},
-		"Некий_Товар3": {GoodsId: "НекийТовар3", MarketID: "Некий-Ecomerce3", Accessibility: true},
-	}
-	return &MarketService{markets: markets}
+	return &MarketService{markets: make(map[string]domain.MarketDomain)}
 }
 
 func (ms *MarketService) ViewMarkets(ctx context.Context, req *marketpb.ViewMarketsRequest) (*marketpb.ViewMarketsResponse, error) {

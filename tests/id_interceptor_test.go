@@ -10,11 +10,8 @@ import (
 
 func TestRequestIdAdd(t *testing.T) {
 
-	inter := interceptors.XRequestIDInterceptor()
-
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-
-		id := ctx.Value(interceptors.RequestIDKey)
+		id := ctx.Value(interceptors.RequestID)
 
 		if id == nil {
 			t.Fatalf("x-request-id не добавлен: %v", id)
@@ -22,8 +19,8 @@ func TestRequestIdAdd(t *testing.T) {
 		return "ok", nil
 	}
 
-	_, err := inter(context.Background(), nil, &grpc.UnaryServerInfo{}, handler)
+	_, err := interceptors.RequestIdInterceptor(context.Background(), nil, &grpc.UnaryServerInfo{}, handler)
 	if err != nil {
-		t.Fatalf(err)
+		t.Fatalf("ошибка %v", err)
 	}
 }

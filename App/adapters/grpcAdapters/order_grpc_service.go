@@ -2,51 +2,55 @@ package grpcAdapters
 
 import (
 	"context"
-	"gRPCbigapp/App/adapters/postgra"
 	"gRPCbigapp/App/domain"
+	"gRPCbigapp/App/interceptors"
 	orderpb "gRPCbigapp/Protofiles/gRPCbigapp/Protofiles/order"
-
-	"github.com/google/uuid"
 )
+
+type OrderRepository interface {
+	Create(ctx context.Context, order *domain.OrderDomain) error
+	GetStatus(ctx context.Context, orderId string) (string, error)
+}
 
 type OrderService struct {
 	orderpb.UnimplementedOrderServiceServer
-	repa *postgra.OrderRepoService
+	repa OrderRepository
 }
 
-func NewOrderService(repa *postgra.OrderRepoService) *OrderService {
-	return &OrderService{
-		repa: repa,
-	}
+func NewOrderService(repa OrderRepository) *OrderService {
+	return &OrderService{repa: repa}
 }
 
 func (os *OrderService) CreateOrder(ctx context.Context, req *orderpb.CreateOrderRequest) (*orderpb.CreateOrderResponse, error) {
 
-	id := uuid.New().String()
+	requestId, ok := ctx.Value(interceptors.RequestID).(string)
+	if !ok {
+		requestId = ""
+	}
 
 	order := domain.OrderDomain{
 		UserID:      req.UserId,
-		OrderID:     id,
+		OrderID:     requestId,
 		MarketName:  req.MarketId,
 		Price:       req.Price,
 		Amount:      req.Quantity,
 		OrderStatus: "создан",
 	}
 
-	err := os.repa.Create(ctx, order)
+	err := os.repa.Create(ctx, &order)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return &orderpb.CreateOrderResponse{
-		OrderId:     id,
+		OrderId:     requestId,
 		OrderStatus: "Заказ создан",
 	}, nil
 }
 
 func (os *OrderService) GetOrderStatus(ctx context.Context, req *orderpb.GetOrderStatusRequest) (*orderpb.GetOrderStatusResponse, error) {
-	status, err := os.repa.GetStatus(ctx, req.OrderId) // я не могу понять что ему не нравится
+	status, err := os.repa.GetStatus(ctx, req.OrderId)
 	if err != nil {
 		return nil, err
 	}
