@@ -1,6 +1,6 @@
 
 services:
-
+# юзал просто depend_on без helthcheckов, хотя по идее должны быть именно они
   postgres:
     image: postgres:16-alpine
     environment:
@@ -26,9 +26,35 @@ services:
   prometheus:
     image: prom/prometheus
     volumes:
-      - ./prometheus.yaml:etc/prometheus/prometheus.yaml
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
-    extra_hosts:
-      - "host.docker.internal:host-gateway" #вот тут вопрос кстати, по идее это привязывает нас к хост машине, ну а раз ты поднимаешь то всё ое
-# но с другой стороны я видел что можно через такую штуку прокидывать домены, довольно прекольно
+    depends_on:
+      - order-service
+      - market-service
+
+  order-service:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/dockerOrderFile/Dockerfile
+    ports:
+      - "50051:50051"
+      - "2112:2112"
+    depends_on:
+      - redis
+      - postgres
+    environment:
+      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/gRPCbigApp"
+      REDIS_ADDR: "redis:6379"
+
+  market-service:
+    build:
+      context: .
+      dockerfile: ./dockerfiles/dockerServiceFile/Dockerfile
+    ports:
+      - "50052:50052"
+      - "2113:2113"
+    depends_on:
+      - redis
+    environment:
+      REDIS_ADDR: "redis:6379"

@@ -6,9 +6,9 @@ import (
 	"gRPCbigapp/App/adapters/postgra"
 	"gRPCbigapp/App/interceptors"
 	orderpb "gRPCbigapp/Protofiles/gRPCbigapp/Protofiles/order"
-	"log"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -22,11 +22,14 @@ import (
 func main() {
 	logger, _ := zap.NewProduction()
 
-	db, err := pgxpool.New(context.Background(), "postgres://postgres:postgres@postgres:5432/gRPCbigApp")
-	if err != nil {
-		log.Fatal(err)
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		databaseURL = "postgres://postgres:postgres@localhost:5432/postgres"
 	}
-
+	db, err := pgxpool.New(context.Background(), databaseURL)
+	if err != nil {
+		logger.Fatal("Невозможно подключится к бд", zap.Error(err))
+	}
 	rds := redis.NewClient(&redis.Options{
 		Addr: "redis:6379",
 	})

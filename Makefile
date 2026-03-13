@@ -1,6 +1,9 @@
 
 up:
-	docker-compose up 
+	docker-compose up -d
+
+down:
+	docker-compose down 
 
 proto:
 	protoc --go_out=. --go_out=paths=source_relative \
