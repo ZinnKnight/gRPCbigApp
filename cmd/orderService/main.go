@@ -2,62 +2,106 @@ package main
 
 import (
 	"context"
-	"gRPCbigapp/App/adapters/grpcAdapters"
-	"gRPCbigapp/App/adapters/postgra"
-	"gRPCbigapp/App/interceptors"
-	orderpb "gRPCbigapp/Protofiles/gRPCbigapp/Protofiles/order"
+	"fmt"
+	"gRPCbigapp/app/adapters/grpcAdapters/acsessAdapter"
+	"gRPCbigapp/app/adapters/grpcAdapters/orderAdapter"
+	"gRPCbigapp/app/interceptors/id_interceptor"
+	"gRPCbigapp/app/interceptors/panic_interceptor"
+	"gRPCbigapp/app/postgra"
+	"gRPCbigapp/app/usecase"
+	"gRPCbigapp/jaeger"
+	logger2 "gRPCbigapp/logger"
+	orderpb "gRPCbigapp/protofiles/gRPCbigapp/Protofiles/order"
+	"log"
 	"net"
 	"net/http"
 	"os"
 
-	"github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/redis/go-redis/v9"
-	"google.golang.org/grpc"
-
+	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
 	logger, _ := zap.NewProduction()
+	defer logger.Sync()
 
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		databaseURL = "postgres://postgres:postgres@localhost:5432/postgres"
+		databaseURL = "postgres://postgres:postgres@localhost:5432/gRPCbigApp"
 	}
-	db, err := pgxpool.New(context.Background(), databaseURL)
+
+	pool, err := pgxpool.New(context.Background(), databaseURL)
 	if err != nil {
-		logger.Fatal("Невозможно подключится к бд", zap.Error(err))
+		log.Fatal("Не может подключится к базе", zap.Error(err))
 	}
-	rds := redis.NewClient(&redis.Options{
-		Addr: "redis:6379",
-	})
+	defer pool.Close()
 
-	repo := postgra.NewOrderRepoService(db)
-	service := grpcAdapters.NewOrderService(repo)
+	repository := postgra.NewOrderRepository(pool)
+	if err := repository.DatabaseShemeInitiation(context.Background()); err != nil {
+		log.Fatal("Не смогли создать разметку бд", zap.Error(err))
+	}
 
-	lis, _ := net.Listen("tcp", ":50051")
+	marketAddress := os.Getenv("MARKET_ADDRESS")
+	if marketAddress == "" {
+		marketAddress = "market-service:50052"
+	}
+	marketConnection, err := grpc.NewClient(marketAddress,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUnaryInterceptor(id_interceptor.XRequestIdInterceptor))
+	if err != nil {
+		log.Fatal("Не можем подключить market-service", zap.Error(err))
+	}
+	defer marketConnection.Close()
+
+	marketCk := acsessAdapter.NewGRPCAccessAdapter(marketConnection)
+
+	orderUC := usecase.NewOrderUseCaseImplementation(repository, marketCk)
+
+	jaegerCfg := jaeger.JaegerConfiguration{
+		EndpointCollector: os.Getenv("JAEGER_ENDPOINT_COLLECTOR"),
+		ServiceName:       os.Getenv("JAEGER_SERVICE_NAME"),
+	}
+	if jaegerCfg.EndpointCollector == "" {
+		jaegerCfg.EndpointCollector = "http://jaeger:14268"
+	}
+	if jaegerCfg.ServiceName == "" {
+		jaegerCfg.ServiceName = "order-service"
+	}
+
+	grpcprometheus.EnableHandlingTimeHistogram()
 
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			interceptors.UnaryPanicRecoveryInterceptor(),
-			grpc_prometheus.UnaryServerInterceptor,
-			interceptors.RedisCacheInterceptor(rds),
-			//	grpc_prometheus.StreamServerInterceptor,
-		),
-	)
+			id_interceptor.RequestIdInterceptor,
+			jaeger.JaegerInterceptor(jaegerCfg, logger),
+			logger2.LoggerZapInterceptor(logger),
+			panic_interceptor.UnaryPanicRecoveryInterceptor(logger),
+			grpcprometheus.UnaryServerInterceptor,
+		))
 
-	orderpb.RegisterOrderServiceServer(server, service)
-
-	grpc_prometheus.Register(server)
+	orderServ := orderAdapter.NewOrderGrpcAdapter(orderUC)
+	orderpb.RegisterOrderServiceServer(server, orderServ)
+	grpcprometheus.Register(server)
 
 	go func() {
-		http.Handle("/metrics", promhttp.Handler())
-		http.ListenAndServe(":2112", nil)
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		logger.Info("слушаем метрики prometheus :2112")
+		if err := http.ListenAndServe(":2112", mux); err != nil {
+			logger.Error("не можем достучатся до сервиса prometheus ", zap.Error(err))
+		}
 	}()
 
-	logger.Info("Сервер поднят")
-
-	server.Serve(lis)
+	listening, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatal("не можем подключится ", zap.Error(err))
+	}
+	fmt.Printf("Слушаем метрики на :50051")
+	if err := server.Serve(listening); err != nil {
+		log.Fatal("не можем читать", zap.Error(err))
+	}
 }

@@ -1,14 +1,23 @@
 package main
 
 import (
-	"gRPCbigapp/App/adapters/grpcAdapters"
-	"gRPCbigapp/App/interceptors"
-	marketpb "gRPCbigapp/Protofiles/gRPCbigapp/Protofiles/markets"
+	"fmt"
+	"gRPCbigapp/app/adapters/grpcAdapters/marketAdapter"
+	"gRPCbigapp/app/adapters/repo"
+	"gRPCbigapp/app/interceptors/id_interceptor"
+	"gRPCbigapp/app/interceptors/panic_interceptor"
+	"gRPCbigapp/app/usecase"
+	"gRPCbigapp/jaeger"
+	logger2 "gRPCbigapp/logger"
+	marketpb "gRPCbigapp/protofiles/gRPCbigapp/Protofiles/markets"
+	redis2 "gRPCbigapp/redis"
 	"log"
 	"net"
 	"net/http"
+	"os"
+	"time"
 
-	grpcrometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
@@ -17,36 +26,63 @@ import (
 
 func main() {
 	logger, _ := zap.NewProduction()
+	defer logger.Sync()
 
-	lis, err := net.Listen("tcp", ":50052")
-	if err != nil {
-		log.Fatalf("Не удалось подключится: %v", err)
+	redisAddress := os.Getenv("REDIS_ADDRESS")
+	if redisAddress == "" {
+		redisAddress = "localhost:6379"
 	}
 
-	rds := redis.NewClient(&redis.Options{
-		Addr: "redis:6379",
+	redisDB := redis.NewClient(&redis.Options{
+		Addr: redisAddress,
 	})
 
-	service := grpcAdapters.NewMarketService()
+	marketRepo := repo.NewRAMRepo()
+
+	marketUC := usecase.NewMarketUseCaseImplementation(marketRepo)
+
+	jaegerConfig := jaeger.JaegerConfiguration{
+		EndpointCollector: os.Getenv("JAEGER_COLLECTOR_ENDPOINT"),
+		ServiceName:       os.Getenv("JAEGER_SERVICE_NAME"),
+	}
+	if jaegerConfig.EndpointCollector == "" {
+		jaegerConfig.EndpointCollector = "http://jaeger:14268"
+	}
+	if jaegerConfig.ServiceName == "" {
+		jaegerConfig.ServiceName = "market-service"
+	}
+
+	grpcprometheus.EnableHandlingTimeHistogram()
 
 	server := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			interceptors.UnaryPanicRecoveryInterceptor(),
-			grpcrometheus.UnaryServerInterceptor,
-			interceptors.RedisCacheInterceptor(rds),
-			interceptors.LoggerZapInterceptor(logger),
-			interceptors.RequestIdInterceptor,
-		),
-	)
+			id_interceptor.RequestIdInterceptor,
+			jaeger.JaegerInterceptor(jaegerConfig, logger),
+			logger2.LoggerZapInterceptor(logger),
+			panic_interceptor.UnaryPanicRecoveryInterceptor(logger),
+			grpcprometheus.UnaryServerInterceptor,
+			redis2.RedisCacheInterceptor(redisDB, 30*time.Second, logger),
+		))
 
-	marketpb.RegisterSpotInstrumentServiceServer(server, service)
-
-	grpcrometheus.Register(server)
+	marketGRPC := marketAdapter.NewMarketGrpcAdapter(marketUC)
+	marketpb.RegisterSpotInstrumentServiceServer(server, marketGRPC)
+	grpcprometheus.Register(server)
 
 	go func() {
-		http.Handle("/metrics", promhttp.Handler())
-		http.ListenAndServe(":2113", nil)
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		logger.Info(fmt.Sprintf("Слушаем метрики на порте: %s", os.Getenv("PORT")))
+		if err := http.ListenAndServe(":2113", mux); err != nil {
+			logger.Error("Не можем достучатся до prometheus", zap.Error(err))
+		}
 	}()
 
-	server.Serve(lis)
+	listening, err := net.Listen("tcp", ":50052")
+	if err != nil {
+		log.Fatal("Не можем подключится", zap.Error(err))
+	}
+	fmt.Printf("MarketService слушает на: %s\n", os.Getenv("PORT"))
+	if err := server.Serve(listening); err != nil {
+		log.Fatal("Не можем читать", zap.Error(err))
+	}
 }
