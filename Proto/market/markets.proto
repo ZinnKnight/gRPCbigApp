@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package markets;
+
+option go_package = "/market";
+
+service SpotInstrumentService {
+  rpc ViewMarketsByID(ViewMarketsByIDRequest) returns (ViewMarketsByIDResponse);
+  rpc ViewMarketsAll(ViewMarketsAllRequest) returns (ViewMarketsAllResponse);
+}
+
+message Market {
+  string market_id = 1;
+  bool enable = 2;
+}
+
+message ViewMarketsByIDRequest {
+  string token = 1;
+  string market_id = 2;
+}
+
+message ViewMarketsByIDResponse {
+  Market market = 1;
+}
+
+message ViewMarketsAllRequest {
+  string token = 1;
+}
+
+message ViewMarketsAllResponse {
+  repeated Market markets = 1;
+}

@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package order;
+
+option go_package = "/order";
+
+service OrderService {
+  rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrderStatusByID(OrderStatusByIDRequest) returns (OrderStatusByIDResponse);
+  rpc StreamOrderUpdates(StreamOrderRequest) returns (stream OrderStatusByIDResponse);
+  rpc GetOrderStatusAll(OrderStatusAllRequest) returns (OrderStatusAllResponse);
+}
+
+
+message CreateOrderRequest {
+  string market_id = 2;
+  string order_type = 3;
+  double price = 4;
+  double quantity = 5;
+  string token = 6;
+}
+
+message CreateOrderResponse {
+  string order_id = 1;
+  string order_status = 2;
+}
+
+message OrderStatusByIDRequest {
+  string order_id = 1;
+  string token = 2;
+}
+
+message OrderStatusByIDResponse {
+  string order_id = 1;
+  string order_status = 2;
+}
+
+message OrderStatusAllRequest {
+  string token = 1;
+}
+
+message OrderStatusAllResponse {
+  repeated string order_id = 1;
+  repeated string order_status = 2;
+}
+
+message StreamOrderRequest {
+  string order_id = 1;
+  string token = 2;
+}

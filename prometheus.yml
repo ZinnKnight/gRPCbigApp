@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "order-service"
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["order-service:2112"]
+        labels:
+          service: "order"
+          environment: "development"
+
+  - job_name: "market-service"
+    scrape_interval: 10s
+    static_configs:
+      - targets: ["market-service:2113"]
+        labels:
+          service: "market"
+          environment: "development"

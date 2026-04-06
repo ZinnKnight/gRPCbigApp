@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package auth;
+
+option go_package = "/client";
+
+enum Roles {
+  UNAUTHORISED_USER = 0;
+  FREE_PLAN_USER = 1;
+  PRO_PLAN_USER = 2;
+  ADMIN = 3;
+}
+
+service AuthService {
+  rpc UserRegistration(RegisterRequest) returns (AuthResponse);
+  rpc UserLogin(LoginRequest) returns (AuthResponse);
+  rpc PlanChange(PlanChangeRequest) returns (PlanChangeResponse);
+  rpc AdminCheck(IsAdminRequest) returns (IsAdminResponse);
+}
+
+message RegisterRequest {
+  string user_name = 1;
+  string user_password = 2;
+  Roles user_role = 3;
+}
+
+message LoginRequest {
+  string user_id = 1;
+}
+
+message AuthResponse {
+  string token = 1;
+}
+
+
+message PlanChangeRequest {
+  string user_name = 1;
+  Roles user_role = 2;
+}
+
+message PlanChangeResponse {
+  string token = 1;
+  string message = 2;
+}
+
+message IsAdminRequest {
+  string user_id = 1;
+}
+
+message IsAdminResponse {
+  bool user_is_admin = 1;
+}
