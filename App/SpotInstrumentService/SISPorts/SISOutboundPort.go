@@ -1,14 +1,11 @@
-package SISOutboundPort
+package SISPorts
 
 import (
 	"context"
 	"gRPCbigapp/App/SpotInstrumentService/SISDomain"
 )
 
-type SISOutboundPort interface {
-	ViewMarketByID(ctx context.Context, marketId string) (*SISDomain.MarketDomain, error)
-	// View chosen market by ID of this market
-
-	ViewAllMarkets(ctx context.Context) ([]*SISDomain.MarketDomain, error)
-	// View all markets as a list, witch depends on a role
+type SISOutboundRepo interface {
+	FindByID(ctx context.Context, marketID string) (*SISDomain.MarketDomain, error)
+	FindAll(ctx context.Context) ([]*SISDomain.MarketDomain, error)
 }

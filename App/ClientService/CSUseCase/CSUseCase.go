@@ -1,32 +1,117 @@
 package CSUseCase
 
-import "C"
 import (
 	"context"
-	"gRPCbigapp/ClientService/CSDomain"
-	"gRPCbigapp/ClientService/CSPorts/CSOutboundPorts"
+	"encoding/json"
+	"fmt"
+	"gRPCbigapp/App/ClientService/CSDomain"
+	"gRPCbigapp/App/ClientService/CSPorts"
+	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
+	"gRPCbigapp/App/Shared/Outbox"
+	"gRPCbigapp/App/Shared/Txmanager"
+	"time"
+
+	"github.com/google/uuid"
 )
 
-type UserService struct {
-	repo CSOutboundPorts.CSOutboundPorts
+var _ CSPorts.UserInboundPort = (*UserUseCase)(nil)
+
+type UserUseCase struct {
+	repo      CSPorts.CSOutboundPorts
+	outbox    *Outbox.Repository
+	txManager *Txmanager.TxManager
+	logger    LoggerPorts.Logger
 }
 
-func NewUserService(r CSOutboundPorts.CSOutboundPorts) *UserService {
-	return &UserService{repo: r}
+func NewUserUseCase(repo CSPorts.CSOutboundPorts, outbox *Outbox.Repository, txManager *Txmanager.TxManager,
+	logger LoggerPorts.Logger) *UserUseCase {
+	return &UserUseCase{
+		outbox:    outbox,
+		txManager: txManager,
+		logger:    logger,
+		repo:      repo,
+	}
 }
 
-func (us *UserService) CreateUser(ctx context.Context, user *CSDomain.User) error {
-	return us.repo.SaveUserInDB(ctx, user)
+func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUserInput) (*CSDomain.User, error) {
+	user := &CSDomain.User{
+		UserID:       uuid.New().String(),
+		UserName:     rui.UserName,
+		UserPassword: rui.UserPassword,
+		UserRole:     CSDomain.Free,
+	}
+
+	if err := user.ValidateUser(); err != nil {
+		return nil, fmt.Errorf("usecase, user registration: %w", err)
+	}
+
+	payload, err := json.Marshal(map[string]interface{}{
+		"user_id":   user.UserID,
+		"name":      user.UserName,
+		"user_plan": string(user.UserRole),
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("usecase, user marshaling: %w", err)
+	}
+
+	event := &Outbox.Event{
+		AggregatorType: "user",
+		AggregatorID:   user.UserID,
+		EventType:      "UserRegistered",
+		Payload:        payload,
+		IdempotencyKey: uuid.New().String(),
+		CreatedAt:      time.Now(),
+	}
+
+	err = us.txManager.Do(ctx, func(ctx context.Context) error {
+		if err := us.repo.SaveUser(ctx, user); err != nil {
+			return fmt.Errorf("usecase, user saving: %w", err)
+		}
+		return us.outbox.SaveEvent(ctx, event)
+	})
+	if err != nil {
+		us.logger.LogError("Usecase, failed to save user",
+			LoggerPorts.Fieled{Key: "id", Value: user.UserID},
+			LoggerPorts.Fieled{Key: "error", Value: err.Error()},
+		)
+		return nil, fmt.Errorf("usecase, user registration: %w", err)
+	}
+	return user, nil
 }
 
-func (us *UserService) LoginUser(ctx context.Context, userId string) (*CSDomain.User, error) {
-	return us.repo.GetUserFromDB(ctx, userId)
+func (us *UserUseCase) LoginUser(ctx context.Context, userID string) (*CSDomain.User, error) {
+	user, err := us.repo.GetUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("usecase, logging user: %w", err)
+	}
+	return user, nil
 }
 
-func (us *UserService) IsAdmin(ctx context.Context, admin string) (*CSDomain.Admin, error) {
-	return us.repo.CheckIsAdmin(ctx, admin)
+func (us *UserUseCase) IsAdmin(ctx context.Context, userID string) (bool, error) {
+	return us.repo.IsAdmin(ctx, userID)
 }
 
-func (us *UserService) ChangeUserPlan(ctx context.Context, user *CSDomain.User) error {
-	return us.repo.UpdateUserPlan(ctx, user)
+func (us *UserUseCase) ChangeUserPlan(ctx context.Context, userID string, newPlan CSDomain.UserPlan) error {
+	return us.txManager.Do(ctx, func(ctx context.Context) error {
+		if err := us.repo.UpdateUserPlan(ctx, userID, newPlan); err != nil {
+			return fmt.Errorf("usecase, user plan changing: %w", err)
+		}
+
+		payload, err := json.Marshal(map[string]interface{}{
+			"user_id": userID,
+			"plan":    string(newPlan),
+		})
+		if err != nil {
+			return fmt.Errorf("usecase, user plan marshaling: %w", err)
+		}
+		return us.outbox.SaveEvent(ctx, &Outbox.Event{
+			AggregatorType: "user",
+			AggregatorID:   userID,
+			EventType:      "UserPlanChanged",
+			Payload:        payload,
+			IdempotencyKey: uuid.New().String(),
+			CreatedAt:      time.Now(),
+		})
+	})
 }

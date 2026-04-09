@@ -1,4 +1,4 @@
-package CSOutboundPorts
+package CSPorts
 
 import (
 	"context"
@@ -6,14 +6,8 @@ import (
 )
 
 type CSOutboundPorts interface {
-	SaveUserInDB(ctx context.Context, user *CSDomain.User) error
-	// send data ab user in db, when collecting it
-
-	GetUserFromDB(ctx context.Context, userID string) (*CSDomain.User, error)
-	// load a data ab user after login
-
-	UpdateUserPlan(ctx context.Context, user *CSDomain.User) error
-	// send data ab updating user role, when he decided change it
-
-	CheckIsAdmin(ctx context.Context, admin string) (*CSDomain.Admin, error)
+	SaveUser(ctx context.Context, user *CSDomain.User) error
+	GetUser(ctx context.Context, userID string) (*CSDomain.User, error)
+	UpdateUserPlan(ctx context.Context, userID string, role CSDomain.UserPlan) error
+	IsAdmin(ctx context.Context, userID string) (bool, error)
 }

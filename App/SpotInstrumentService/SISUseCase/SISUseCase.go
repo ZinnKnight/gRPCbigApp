@@ -2,23 +2,35 @@ package SISUseCase
 
 import (
 	"context"
-	"gRPCbigapp/SpotInstrumentService/SISDomain"
-	"gRPCbigapp/SpotInstrumentService/SISPorts/SISOutboundPort"
+	"fmt"
+	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
+	"gRPCbigapp/App/SpotInstrumentService/SISDomain"
+	"gRPCbigapp/App/SpotInstrumentService/SISPorts"
 )
 
-type SpotInstrumentService struct {
-	repo SISOutboundPort.SISOutboundPort
+var _ SISPorts.SISInboundPort = (*SISUseCase)(nil)
+
+type SISUseCase struct {
+	repo   SISPorts.SISOutboundRepo
+	logger LoggerPorts.Logger
 }
 
-func NewSpotInstrumentService(r SISOutboundPort.SISOutboundPort) *SpotInstrumentService {
-	return &SpotInstrumentService{repo: r}
+func NewSISUseCase(repo SISPorts.SISOutboundRepo, logger LoggerPorts.Logger) *SISUseCase {
+	return &SISUseCase{repo: repo, logger: logger}
 }
 
-func (sis *SpotInstrumentService) ViewMarket(ctx context.Context, marketID string) (*SISDomain.MarketDomain, error) {
-	return sis.repo.ViewMarketByID(ctx, marketID)
+func (sis *SISUseCase) GetMarketByID(ctx context.Context, marketID string) (*SISDomain.MarketDomain, error) {
+	market, err := sis.repo.FindByID(ctx, marketID)
+	if err != nil {
+		return nil, fmt.Errorf("usecase, failed to get market: %w", err)
+	}
+	return market, nil
 }
 
-func (sis *SpotInstrumentService) ViewAllMarkets(ctx context.Context) (*[]SISDomain.MarketDomain, error) {
-	return sis.repo.ViewAllMarkets(ctx)
-	// TODO need to check how to return slice of it
+func (sis *SISUseCase) GetAllMarkets(ctx context.Context) ([]*SISDomain.MarketDomain, error) {
+	markets, err := sis.repo.FindAll(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("usecase, failed to get all markets: %w", err)
+	}
+	return markets, nil
 }

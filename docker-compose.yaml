@@ -1,60 +1,75 @@
-
 services:
-# юзал просто depend_on без helthcheckов, хотя по идее должны быть именно они
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: postgres
-      #я знаю что так нельзя хранить имя и пароль, тем более передавать в виде файлов, но проект маленький
-      # и переусложнять его такими штуками как правильное сохранение секретов и т.д - мне показалось излишним
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
       POSTGRES_DB: gRPCbigApp
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-
-  jaeger:
-    image: jaegertracing/all-in-one:1.54
-    ports:
-      - "16686:16686"
-      - "14268:14268"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   prometheus:
     image: prom/prometheus
     volumes:
-      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     depends_on:
-      - order-service
-      - market-service
+      order-service:
+        condition: service_started
 
   order-service:
     build:
       context: .
-      dockerfile: cmd/orderService/Dockerfile
+      dockerfile: CMD/OrderServiceCMD/Dockerfile
     ports:
       - "50051:50051"
       - "2112:2112"
     depends_on:
-      - redis
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: "postgres://postgres:postgres@postgres:5432/gRPCbigApp"
       REDIS_ADDR: "redis:6379"
+      GRPC_PORT: "50051"
+      METRICS_PORT: "2112"
+      JWT_SECRET: "change-me-in-production"
+      OUTBOX_POLL_INTERVAL: "5"
+      OUTBOX_BATCH_SIZE: "100"
 
   market-service:
     build:
       context: .
-      dockerfile: cmd/marketsService/Dockerfile
+      dockerfile: CMD/MarketServiceCMD/Dockerfile
     ports:
       - "50052:50052"
       - "2113:2113"
     depends_on:
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
+      DATABASE_URL: "postgres://postgres:postgres@postgres:5432/gRPCbigApp"
       REDIS_ADDR: "redis:6379"
+      GRPC_PORT: "50052"
+      METRICS_PORT: "2113"
+      JWT_SECRET: "change-me-in-production"
+

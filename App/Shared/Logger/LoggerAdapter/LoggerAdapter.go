@@ -1,7 +1,7 @@
 package LoggerAdapter
 
 import (
-	"gRPCbigapp/Shared/Logger/LoggerPorts"
+	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
 
 	"go.uber.org/zap"
 )
@@ -32,4 +32,8 @@ func (l *ZapLogger) LogError(msg string, fields ...LoggerPorts.Fieled) {
 
 func (l *ZapLogger) LogInfo(msg string, fields ...LoggerPorts.Fieled) {
 	l.log.Info(msg, toZapLogger(fields)...)
+}
+
+func (l *ZapLogger) Sync() error {
+	return l.log.Sync()
 }

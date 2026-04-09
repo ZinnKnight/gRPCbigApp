@@ -1,6 +1,9 @@
 package SISDomain
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
 type MarketDomain struct {
 	GoodsID       string
@@ -8,3 +11,7 @@ type MarketDomain struct {
 	Accessibility bool
 	TTL           *time.Time
 }
+
+var (
+	ErrMarketNotFound = errors.New("market not found")
+)
