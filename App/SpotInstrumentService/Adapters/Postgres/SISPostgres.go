@@ -3,8 +3,8 @@ package Postgres
 import (
 	"context"
 	"fmt"
-	"gRPCbigapp/App/Shared/Txmanager"
 	"gRPCbigapp/App/SpotInstrumentService/SISDomain"
+	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

@@ -3,9 +3,9 @@ package SISUseCase
 import (
 	"context"
 	"fmt"
-	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
 	"gRPCbigapp/App/SpotInstrumentService/SISDomain"
 	"gRPCbigapp/App/SpotInstrumentService/SISPorts"
+	"gRPCbigapp/Shared/Logger/LoggerPorts"
 )
 
 var _ SISPorts.SISInboundPort = (*SISUseCase)(nil)

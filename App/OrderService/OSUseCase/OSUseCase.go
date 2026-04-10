@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"gRPCbigapp/App/OrderService/OSDomain"
 	"gRPCbigapp/App/OrderService/OSPorts"
-	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
-	"gRPCbigapp/App/Shared/Outbox"
-	"gRPCbigapp/App/Shared/Txmanager"
+	"gRPCbigapp/Shared/Logger/LoggerPorts"
+	Outbox2 "gRPCbigapp/Shared/Outbox"
+	"gRPCbigapp/Shared/Txmanager"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,12 +18,12 @@ var _ OSPorts.OSInboundPort = (*OSUseCase)(nil)
 
 type OSUseCase struct {
 	repo      OSPorts.OSOutboundPorts
-	outbox    *Outbox.Repository
+	outbox    *Outbox2.Repository
 	txManager *Txmanager.TxManager
 	logger    LoggerPorts.Logger
 }
 
-func NewOSUseCase(repo OSPorts.OSOutboundPorts, outbox *Outbox.Repository, txManager *Txmanager.TxManager, logger LoggerPorts.Logger) *OSUseCase {
+func NewOSUseCase(repo OSPorts.OSOutboundPorts, outbox *Outbox2.Repository, txManager *Txmanager.TxManager, logger LoggerPorts.Logger) *OSUseCase {
 	return &OSUseCase{
 		repo:      repo,
 		outbox:    outbox,
@@ -50,7 +50,7 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 		return "", fmt.Errorf("usecase, fail in marshaling order: %v", err)
 	}
 
-	event := &Outbox.Event{
+	event := &Outbox2.Event{
 		AggregatorType: "order",
 		AggregatorID:   order.OrderID,
 		EventType:      "OrderCreated",

@@ -3,7 +3,7 @@ package RateLimiter
 import (
 	"context"
 	"fmt"
-	"gRPCbigapp/App/Shared/Auth/AuthCTX"
+	"gRPCbigapp/Shared/Auth/AuthCTX"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

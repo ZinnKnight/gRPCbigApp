@@ -2,7 +2,7 @@ package AuthInterceptor
 
 import (
 	"context"
-	"gRPCbigapp/App/Shared/Auth/AuthCTX"
+	"gRPCbigapp/Shared/Auth/AuthCTX"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"

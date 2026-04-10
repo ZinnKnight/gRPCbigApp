@@ -36,7 +36,7 @@ services:
   order-service:
     build:
       context: .
-      dockerfile: CMD/OrderServiceCMD/Dockerfile
+      dockerfile: App/OrderService/OrderServiceCMD/Dockerfile
     ports:
       - "50051:50051"
       - "2112:2112"
@@ -57,7 +57,7 @@ services:
   market-service:
     build:
       context: .
-      dockerfile: CMD/MarketServiceCMD/Dockerfile
+      dockerfile: App/SpotInstrumentService/MarketServiceCMD/Dockerfile
     ports:
       - "50052:50052"
       - "2113:2113"

@@ -2,7 +2,7 @@ package PanicInterceptor
 
 import (
 	"context"
-	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
+	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	"runtime/debug"
 
 	"google.golang.org/grpc"

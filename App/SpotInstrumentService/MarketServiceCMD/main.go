@@ -3,23 +3,24 @@ package main
 import (
 	"context"
 	"fmt"
-	"gRPCbigapp/App/Shared/Config"
-	"gRPCbigapp/App/Shared/Metrics"
-	"gRPCbigapp/App/Shared/PanicInterceptor"
-	"gRPCbigapp/App/Shared/RateLimiter"
+	authInterceptor "gRPCbigapp/Shared/Auth/AuthInterceptor"
+	"gRPCbigapp/Shared/Config"
+	logAdapter "gRPCbigapp/Shared/Logger/LoggerAdapter"
+	Metrics2 "gRPCbigapp/Shared/Metrics"
+	"gRPCbigapp/Shared/PanicInterceptor"
+	RateLimiter2 "gRPCbigapp/Shared/RateLimiter"
+	redisClient "gRPCbigapp/Shared/Redis"
 	"net"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	authInterceptor "gRPCbigapp/App/Shared/Auth/AuthInterceptor"
-	logAdapter "gRPCbigapp/App/Shared/Logger/LoggerAdapter"
-	redisClient "gRPCbigapp/App/Shared/Redis"
 	marketPG "gRPCbigapp/App/SpotInstrumentService/Adapters/Postgres"
 	marketGRPC "gRPCbigapp/App/SpotInstrumentService/Adapters/SISgrpcAdapter"
 	marketUC "gRPCbigapp/App/SpotInstrumentService/SISUseCase"
 	marketPB "gRPCbigapp/Proto/market"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 )
@@ -65,20 +66,20 @@ func main() {
 	marketUseCase := marketUC.NewSISUseCase(marketRepo, logger)
 	marketHandler := marketGRPC.NewSISgrpcHandler(marketUseCase, logger)
 
-	limiter := RateLimiter.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
+	limiter := RateLimiter2.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			PanicInterceptor.PanicRecoveryInterceptor(logger),
-			Metrics.UnaryServerInterceptor(),
+			Metrics2.UnaryServerInterceptor(),
 			authInterceptor.AuthInterceptor([]byte(cfg.JWTSecretKey)),
-			RateLimiter.UnaryServerInterceptor(limiter),
+			RateLimiter2.UnaryServerInterceptor(limiter),
 		),
 	)
 	marketPB.RegisterSpotInstrumentServiceServer(grpcServer, marketHandler)
 
 	go func() {
-		if err := Metrics.StartMetricsServer(ctx, cfg.MetricsPort); err != nil {
+		if err := Metrics2.StartMetricsServer(ctx, cfg.MetricsPort); err != nil {
 			fmt.Println("Error starting metrics server: %w", err)
 		}
 	}()

@@ -2,7 +2,7 @@ package Outbox
 
 import (
 	"context"
-	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
+	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	"time"
 )
 

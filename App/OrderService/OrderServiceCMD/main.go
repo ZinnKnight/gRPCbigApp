@@ -9,18 +9,18 @@ import (
 	orderPG "gRPCbigapp/App/OrderService/OSAdapters/OSPostgre"
 	orderGRPC "gRPCbigapp/App/OrderService/OSAdapters/grpcAdapter"
 	orderUC "gRPCbigapp/App/OrderService/OSUseCase"
-	authAdapter "gRPCbigapp/App/Shared/Auth/AuthAdapter"
-	authInterceptor "gRPCbigapp/App/Shared/Auth/AuthInterceptor"
-	"gRPCbigapp/App/Shared/Config"
-	logAdapter "gRPCbigapp/App/Shared/Logger/LoggerAdapter"
-	"gRPCbigapp/App/Shared/Metrics"
-	"gRPCbigapp/App/Shared/Outbox"
-	"gRPCbigapp/App/Shared/PanicInterceptor"
-	"gRPCbigapp/App/Shared/RateLimiter"
-	redisClient "gRPCbigapp/App/Shared/Redis"
-	"gRPCbigapp/App/Shared/Txmanager"
 	orderPB "gRPCbigapp/Proto/Order"
 	clientPB "gRPCbigapp/Proto/client"
+	authAdapter "gRPCbigapp/Shared/Auth/AuthAdapter"
+	authInterceptor "gRPCbigapp/Shared/Auth/AuthInterceptor"
+	"gRPCbigapp/Shared/Config"
+	logAdapter "gRPCbigapp/Shared/Logger/LoggerAdapter"
+	Metrics2 "gRPCbigapp/Shared/Metrics"
+	Outbox2 "gRPCbigapp/Shared/Outbox"
+	"gRPCbigapp/Shared/PanicInterceptor"
+	RateLimiter2 "gRPCbigapp/Shared/RateLimiter"
+	redisClient "gRPCbigapp/Shared/Redis"
+	"gRPCbigapp/Shared/Txmanager"
 	"net"
 	"os"
 	"os/signal"
@@ -76,7 +76,7 @@ func main() {
 	defer rdb.Close()
 
 	txManag := Txmanager.NewTxManager(pool)
-	outboxRepo := Outbox.NewRepository(pool)
+	outboxRepo := Outbox2.NewRepository(pool)
 
 	orderRepo := orderPG.NewOrderRepo(pool)
 	orderUseCase := orderUC.NewOSUseCase(orderRepo, outboxRepo, txManag, logger)
@@ -84,7 +84,7 @@ func main() {
 	clientRepo := clientPG.NewUserRepo(pool)
 	clientUseCase := clientUC.NewUserUseCase(clientRepo, outboxRepo, txManag, logger)
 
-	limiter := RateLimiter.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
+	limiter := RateLimiter2.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
 
 	jwtService := authAdapter.NewJWTService([]byte(cfg.JWTSecretKey), 4*time.Hour)
 	orderHandler := orderGRPC.NewOrderHandler(logger, orderUseCase)
@@ -93,9 +93,9 @@ func main() {
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			PanicInterceptor.PanicRecoveryInterceptor(logger),
-			Metrics.UnaryServerInterceptor(),
+			Metrics2.UnaryServerInterceptor(),
 			authInterceptor.AuthInterceptor([]byte(cfg.JWTSecretKey)),
-			RateLimiter.UnaryServerInterceptor(limiter),
+			RateLimiter2.UnaryServerInterceptor(limiter),
 		),
 	)
 
@@ -103,12 +103,12 @@ func main() {
 	clientPB.RegisterAuthServiceServer(grpcServer, clientHandler)
 
 	go func() {
-		if err := Metrics.StartMetricsServer(ctx, cfg.MetricsPort); err != nil {
+		if err := Metrics2.StartMetricsServer(ctx, cfg.MetricsPort); err != nil {
 			fmt.Fprintf(os.Stderr, "Metrics.StartMetricsServer: %v", err)
 		}
 	}()
 
-	relay := Outbox.NewRelay(
+	relay := Outbox2.NewRelay(
 		outboxRepo,
 		&noopPublisher{},
 		logger,
@@ -144,7 +144,7 @@ func main() {
 
 type noopPublisher struct{}
 
-func (p *noopPublisher) Publish(_ context.Context, event *Outbox.Event) error {
+func (p *noopPublisher) Publish(_ context.Context, event *Outbox2.Event) error {
 	fmt.Printf("[noop-publisher] event_type=%s aggregate_id=%s\n", event.EventType, event.AggregatorID)
 	return nil
 }

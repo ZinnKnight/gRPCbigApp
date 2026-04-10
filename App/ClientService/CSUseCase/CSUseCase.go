@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"gRPCbigapp/App/ClientService/CSDomain"
 	"gRPCbigapp/App/ClientService/CSPorts"
-	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
-	"gRPCbigapp/App/Shared/Outbox"
-	"gRPCbigapp/App/Shared/Txmanager"
+	"gRPCbigapp/Shared/Logger/LoggerPorts"
+	Outbox2 "gRPCbigapp/Shared/Outbox"
+	"gRPCbigapp/Shared/Txmanager"
 	"time"
 
 	"github.com/google/uuid"
@@ -18,12 +18,12 @@ var _ CSPorts.UserInboundPort = (*UserUseCase)(nil)
 
 type UserUseCase struct {
 	repo      CSPorts.CSOutboundPorts
-	outbox    *Outbox.Repository
+	outbox    *Outbox2.Repository
 	txManager *Txmanager.TxManager
 	logger    LoggerPorts.Logger
 }
 
-func NewUserUseCase(repo CSPorts.CSOutboundPorts, outbox *Outbox.Repository, txManager *Txmanager.TxManager,
+func NewUserUseCase(repo CSPorts.CSOutboundPorts, outbox *Outbox2.Repository, txManager *Txmanager.TxManager,
 	logger LoggerPorts.Logger) *UserUseCase {
 	return &UserUseCase{
 		outbox:    outbox,
@@ -55,7 +55,7 @@ func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUse
 		return nil, fmt.Errorf("usecase, user marshaling: %w", err)
 	}
 
-	event := &Outbox.Event{
+	event := &Outbox2.Event{
 		AggregatorType: "user",
 		AggregatorID:   user.UserID,
 		EventType:      "UserRegistered",
@@ -105,7 +105,7 @@ func (us *UserUseCase) ChangeUserPlan(ctx context.Context, userID string, newPla
 		if err != nil {
 			return fmt.Errorf("usecase, user plan marshaling: %w", err)
 		}
-		return us.outbox.SaveEvent(ctx, &Outbox.Event{
+		return us.outbox.SaveEvent(ctx, &Outbox2.Event{
 			AggregatorType: "user",
 			AggregatorID:   userID,
 			EventType:      "UserPlanChanged",

@@ -3,9 +3,9 @@ package grpcAdapter
 import (
 	"context"
 	"gRPCbigapp/App/OrderService/OSPorts"
-	"gRPCbigapp/App/Shared/Auth/AuthCTX"
-	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
 	orderpb "gRPCbigapp/Proto/order"
+	"gRPCbigapp/Shared/Auth/AuthCTX"
+	"gRPCbigapp/Shared/Logger/LoggerPorts"
 )
 
 type OrderHandler struct {

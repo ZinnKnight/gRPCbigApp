@@ -3,10 +3,10 @@ package SISgrpcAdapter
 import (
 	"context"
 	"errors"
-	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
 	"gRPCbigapp/App/SpotInstrumentService/SISDomain"
 	"gRPCbigapp/App/SpotInstrumentService/SISPorts"
 	marketpb "gRPCbigapp/Proto/market"
+	"gRPCbigapp/Shared/Logger/LoggerPorts"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

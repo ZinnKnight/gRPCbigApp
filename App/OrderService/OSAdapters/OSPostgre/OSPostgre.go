@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"gRPCbigapp/App/OrderService/OSDomain"
-	"gRPCbigapp/App/Shared/Txmanager"
+	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

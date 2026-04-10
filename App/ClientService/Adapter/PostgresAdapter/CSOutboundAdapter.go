@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"gRPCbigapp/App/ClientService/CSDomain"
 	"gRPCbigapp/App/ClientService/CSPorts"
-	"gRPCbigapp/App/Shared/Txmanager"
+	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

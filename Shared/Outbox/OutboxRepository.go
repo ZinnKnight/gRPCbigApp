@@ -3,7 +3,7 @@ package Outbox
 import (
 	"context"
 	"fmt"
-	"gRPCbigapp/App/Shared/Txmanager"
+	"gRPCbigapp/Shared/Txmanager"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"

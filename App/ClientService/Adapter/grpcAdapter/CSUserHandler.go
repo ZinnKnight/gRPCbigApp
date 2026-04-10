@@ -5,10 +5,10 @@ import (
 	"errors"
 	"gRPCbigapp/App/ClientService/CSDomain"
 	"gRPCbigapp/App/ClientService/CSPorts"
-	"gRPCbigapp/App/Shared/Auth/AuthAdapter"
-	"gRPCbigapp/App/Shared/Auth/AuthCTX"
-	"gRPCbigapp/App/Shared/Logger/LoggerPorts"
 	clientpb "gRPCbigapp/Proto/client"
+	"gRPCbigapp/Shared/Auth/AuthAdapter"
+	"gRPCbigapp/Shared/Auth/AuthCTX"
+	"gRPCbigapp/Shared/Logger/LoggerPorts"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
