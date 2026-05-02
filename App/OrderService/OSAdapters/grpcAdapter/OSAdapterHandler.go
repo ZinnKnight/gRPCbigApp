@@ -6,6 +6,10 @@ import (
 	orderpb "gRPCbigapp/Proto/order"
 	"gRPCbigapp/Shared/Auth/AuthCTX"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
+
+	"github.com/shopspring/decimal"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type OrderHandler struct {
@@ -27,11 +31,21 @@ func (o *OrderHandler) CreateOrder(ctx context.Context, req *orderpb.CreateOrder
 		return nil, ErrUnauthenticated
 	}
 
+	price, err := decimal.NewFromString(req.Price)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "incorrect price")
+	}
+
+	quantity, err := decimal.NewFromString(req.Quantity)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "incorrect quantity")
+	}
+
 	cmd := OSPorts.CreteOrder{
 		UserID:   user.UserID,
 		MarketID: req.MarketId,
-		Price:    req.Price,
-		Quantity: req.Quantity,
+		Price:    price,
+		Quantity: quantity,
 	}
 
 	orderID, err := o.useCase.CreteOrder(ctx, cmd)
@@ -46,7 +60,11 @@ func (o *OrderHandler) CreateOrder(ctx context.Context, req *orderpb.CreateOrder
 }
 
 func (o *OrderHandler) GetOrderStatusByID(ctx context.Context, req *orderpb.OrderStatusByIDRequest) (*orderpb.OrderStatusByIDResponse, error) {
-	order, err := o.useCase.GetOrderByID(ctx, req.OrderId)
+	user, ok := AuthCTX.GetUser(ctx)
+	if !ok {
+		return nil, ErrUnauthenticated
+	}
+	order, err := o.useCase.GetOrderByID(ctx, req.OrderId, user.UserID)
 	if err != nil {
 		return nil, DomainErrorMapping(err)
 	}
@@ -61,18 +79,22 @@ func (o *OrderHandler) GetAllOrderStatuses(ctx context.Context, req *orderpb.Ord
 	if !ok {
 		return nil, ErrUnauthenticated
 	}
+
 	orders, err := o.useCase.GetAllOrders(ctx, user.UserID)
 	if err != nil {
 		return nil, DomainErrorMapping(err)
 	}
 
-	var ids, statuses []string
+	protoOrders := make([]*orderpb.OrderStatusStruct, 0, len(orders))
+
 	for _, ord := range orders {
-		ids = append(ids, ord.OrderID)
-		statuses = append(statuses, string(ord.OrderStatus))
+		protoOrders = append(protoOrders, &orderpb.OrderStatusStruct{
+			OrderId: ord.OrderID,
+			Status:  string(ord.OrderStatus),
+		})
 	}
+
 	return &orderpb.OrderStatusAllResponse{
-		OrderId:     ids,
-		OrderStatus: statuses,
+		Orders: protoOrders,
 	}, nil
 }

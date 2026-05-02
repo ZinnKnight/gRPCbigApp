@@ -27,10 +27,17 @@ func (sis *SISUseCase) GetMarketByID(ctx context.Context, marketID string) (*SIS
 	return market, nil
 }
 
-func (sis *SISUseCase) GetAllMarkets(ctx context.Context) ([]*SISDomain.MarketDomain, error) {
-	markets, err := sis.repo.FindAll(ctx)
+func (sis *SISUseCase) GetAllMarkets(ctx context.Context, pageSize int, curs string) ([]*SISDomain.MarketDomain, string, error) {
+	markets, err := sis.repo.FindAll(ctx, pageSize+1, curs)
 	if err != nil {
-		return nil, fmt.Errorf("usecase, failed to get all markets: %w", err)
+		return nil, "", fmt.Errorf("usecase, failed to get all markets: %w", err)
 	}
-	return markets, nil
+
+	var next string
+
+	if len(markets) > pageSize {
+		next = markets[pageSize-1].MarketID
+		markets = markets[:pageSize]
+	}
+	return markets, next, nil
 }

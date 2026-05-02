@@ -84,8 +84,8 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 	return order.OrderID, nil
 }
 
-func (osu *OSUseCase) GetOrderByID(ctx context.Context, orderID string) (*OSDomain.OrderDomain, error) {
-	order, err := osu.repo.FindByID(ctx, orderID)
+func (osu *OSUseCase) GetOrderByID(ctx context.Context, orderID, userID string) (*OSDomain.OrderDomain, error) {
+	order, err := osu.repo.FindByID(ctx, orderID, userID)
 	if err != nil {
 		return nil, fmt.Errorf("usecase, fail in getting order: %v", err)
 	}

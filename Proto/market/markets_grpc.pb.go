@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.6.1
 // - protoc             v6.33.4
-// source: market/markets.proto
+// source: markets.proto
 
 package market
 
@@ -155,5 +155,5 @@ var SpotInstrumentService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "market/markets.proto",
+	Metadata: "markets.proto",
 }

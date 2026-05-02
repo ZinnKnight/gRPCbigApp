@@ -5,14 +5,15 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 type OrderDomain struct {
 	UserID      string
 	OrderID     string
 	MarketID    string
-	Price       float64
-	Amount      float64
+	Price       decimal.Decimal
+	Amount      decimal.Decimal
 	OrderStatus OrderStatus
 	CreatedAt   time.Time
 }
@@ -35,7 +36,7 @@ var (
 	ErrInvalidUserID   = errors.New("invalid order id")
 )
 
-func NewOrder(userID, marketID string, price, amount float64) (*OrderDomain, error) {
+func NewOrder(userID, marketID string, price, amount decimal.Decimal) (*OrderDomain, error) {
 	// Probably switch better, not 100% sure for growth
 	if userID == "" {
 		return nil, ErrInvalidUserID
@@ -43,10 +44,10 @@ func NewOrder(userID, marketID string, price, amount float64) (*OrderDomain, err
 	if marketID == "" {
 		return nil, ErrInvalidMarketID
 	}
-	if amount <= 0 {
+	if amount.LessThanOrEqual(decimal.Zero) {
 		return nil, ErrInvalidAmount
 	}
-	if price <= 0 {
+	if price.LessThanOrEqual(decimal.Zero) {
 		return nil, ErrInvalidPrice
 	}
 

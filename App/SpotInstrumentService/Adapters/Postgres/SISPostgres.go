@@ -27,11 +27,11 @@ type dtExecutor interface {
 	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
 }
 
-func (r *SISMarketRepo) connection(ctx context.Context) dtExecutor {
+func (sisr *SISMarketRepo) connection(ctx context.Context) dtExecutor {
 	if tx, ok := Txmanager.ExtractManager(ctx); ok {
 		return tx
 	}
-	return r.pool
+	return sisr.pool
 }
 
 func (sisr *SISMarketRepo) FindByID(ctx context.Context, marketId string) (*SISDomain.MarketDomain, error) {
@@ -48,10 +48,14 @@ func (sisr *SISMarketRepo) FindByID(ctx context.Context, marketId string) (*SISD
 	return &m, nil
 }
 
-func (sisr *SISMarketRepo) FindAll(ctx context.Context) ([]*SISDomain.MarketDomain, error) {
-	// In future if service will have more colums, probably bad idea, if we not managing them by restrictions
-	const query = `SELECT * FROM markets ORDER BY market_id`
-	rows, err := sisr.connection(ctx).Query(ctx, query)
+func (sisr *SISMarketRepo) FindAll(ctx context.Context, limit int, curs string) ([]*SISDomain.MarketDomain, error) {
+	// Change query on more restricted form
+	const query = `SELECT market_id, goods_id, accessibility, ttl 
+	FROM markets 
+	WHERE market_id > $1
+	ORDER BY market_id ASC
+	LIMIT $2`
+	rows, err := sisr.connection(ctx).Query(ctx, query, curs, limit)
 	if err != nil {
 		return nil, fmt.Errorf("SISMarketRepo, find markets FindAllMarkets: %w", err)
 	}

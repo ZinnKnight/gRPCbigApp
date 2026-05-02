@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v6.33.4
-// source: market/markets.proto
+// source: markets.proto
 
 package market
 
@@ -31,7 +31,7 @@ type Market struct {
 
 func (x *Market) Reset() {
 	*x = Market{}
-	mi := &file_market_markets_proto_msgTypes[0]
+	mi := &file_markets_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -43,7 +43,7 @@ func (x *Market) String() string {
 func (*Market) ProtoMessage() {}
 
 func (x *Market) ProtoReflect() protoreflect.Message {
-	mi := &file_market_markets_proto_msgTypes[0]
+	mi := &file_markets_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -56,7 +56,7 @@ func (x *Market) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Market.ProtoReflect.Descriptor instead.
 func (*Market) Descriptor() ([]byte, []int) {
-	return file_market_markets_proto_rawDescGZIP(), []int{0}
+	return file_markets_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Market) GetMarketId() string {
@@ -83,7 +83,7 @@ type ViewMarketsByIDRequest struct {
 
 func (x *ViewMarketsByIDRequest) Reset() {
 	*x = ViewMarketsByIDRequest{}
-	mi := &file_market_markets_proto_msgTypes[1]
+	mi := &file_markets_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -95,7 +95,7 @@ func (x *ViewMarketsByIDRequest) String() string {
 func (*ViewMarketsByIDRequest) ProtoMessage() {}
 
 func (x *ViewMarketsByIDRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_market_markets_proto_msgTypes[1]
+	mi := &file_markets_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -108,7 +108,7 @@ func (x *ViewMarketsByIDRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViewMarketsByIDRequest.ProtoReflect.Descriptor instead.
 func (*ViewMarketsByIDRequest) Descriptor() ([]byte, []int) {
-	return file_market_markets_proto_rawDescGZIP(), []int{1}
+	return file_markets_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *ViewMarketsByIDRequest) GetToken() string {
@@ -134,7 +134,7 @@ type ViewMarketsByIDResponse struct {
 
 func (x *ViewMarketsByIDResponse) Reset() {
 	*x = ViewMarketsByIDResponse{}
-	mi := &file_market_markets_proto_msgTypes[2]
+	mi := &file_markets_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -146,7 +146,7 @@ func (x *ViewMarketsByIDResponse) String() string {
 func (*ViewMarketsByIDResponse) ProtoMessage() {}
 
 func (x *ViewMarketsByIDResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_market_markets_proto_msgTypes[2]
+	mi := &file_markets_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -159,7 +159,7 @@ func (x *ViewMarketsByIDResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViewMarketsByIDResponse.ProtoReflect.Descriptor instead.
 func (*ViewMarketsByIDResponse) Descriptor() ([]byte, []int) {
-	return file_market_markets_proto_rawDescGZIP(), []int{2}
+	return file_markets_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ViewMarketsByIDResponse) GetMarket() *Market {
@@ -172,13 +172,15 @@ func (x *ViewMarketsByIDResponse) GetMarket() *Market {
 type ViewMarketsAllRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Token         string                 `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	PageSize      int32                  `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	PageToken     string                 `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ViewMarketsAllRequest) Reset() {
 	*x = ViewMarketsAllRequest{}
-	mi := &file_market_markets_proto_msgTypes[3]
+	mi := &file_markets_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -190,7 +192,7 @@ func (x *ViewMarketsAllRequest) String() string {
 func (*ViewMarketsAllRequest) ProtoMessage() {}
 
 func (x *ViewMarketsAllRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_market_markets_proto_msgTypes[3]
+	mi := &file_markets_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -203,7 +205,7 @@ func (x *ViewMarketsAllRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViewMarketsAllRequest.ProtoReflect.Descriptor instead.
 func (*ViewMarketsAllRequest) Descriptor() ([]byte, []int) {
-	return file_market_markets_proto_rawDescGZIP(), []int{3}
+	return file_markets_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ViewMarketsAllRequest) GetToken() string {
@@ -213,16 +215,31 @@ func (x *ViewMarketsAllRequest) GetToken() string {
 	return ""
 }
 
+func (x *ViewMarketsAllRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ViewMarketsAllRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
 type ViewMarketsAllResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Markets       []*Market              `protobuf:"bytes,1,rep,name=markets,proto3" json:"markets,omitempty"`
+	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ViewMarketsAllResponse) Reset() {
 	*x = ViewMarketsAllResponse{}
-	mi := &file_market_markets_proto_msgTypes[4]
+	mi := &file_markets_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -234,7 +251,7 @@ func (x *ViewMarketsAllResponse) String() string {
 func (*ViewMarketsAllResponse) ProtoMessage() {}
 
 func (x *ViewMarketsAllResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_market_markets_proto_msgTypes[4]
+	mi := &file_markets_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -247,7 +264,7 @@ func (x *ViewMarketsAllResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ViewMarketsAllResponse.ProtoReflect.Descriptor instead.
 func (*ViewMarketsAllResponse) Descriptor() ([]byte, []int) {
-	return file_market_markets_proto_rawDescGZIP(), []int{4}
+	return file_markets_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ViewMarketsAllResponse) GetMarkets() []*Market {
@@ -257,11 +274,18 @@ func (x *ViewMarketsAllResponse) GetMarkets() []*Market {
 	return nil
 }
 
-var File_market_markets_proto protoreflect.FileDescriptor
+func (x *ViewMarketsAllResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
 
-const file_market_markets_proto_rawDesc = "" +
+var File_markets_proto protoreflect.FileDescriptor
+
+const file_markets_proto_rawDesc = "" +
 	"\n" +
-	"\x14market/markets.proto\x12\amarkets\"=\n" +
+	"\rmarkets.proto\x12\amarkets\"=\n" +
 	"\x06Market\x12\x1b\n" +
 	"\tmarket_id\x18\x01 \x01(\tR\bmarketId\x12\x16\n" +
 	"\x06enable\x18\x02 \x01(\bR\x06enable\"K\n" +
@@ -269,36 +293,40 @@ const file_market_markets_proto_rawDesc = "" +
 	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1b\n" +
 	"\tmarket_id\x18\x02 \x01(\tR\bmarketId\"B\n" +
 	"\x17ViewMarketsByIDResponse\x12'\n" +
-	"\x06market\x18\x01 \x01(\v2\x0f.markets.MarketR\x06market\"-\n" +
+	"\x06market\x18\x01 \x01(\v2\x0f.markets.MarketR\x06market\"i\n" +
 	"\x15ViewMarketsAllRequest\x12\x14\n" +
-	"\x05token\x18\x01 \x01(\tR\x05token\"C\n" +
+	"\x05token\x18\x01 \x01(\tR\x05token\x12\x1b\n" +
+	"\tpage_size\x18\x02 \x01(\x05R\bpageSize\x12\x1d\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\"k\n" +
 	"\x16ViewMarketsAllResponse\x12)\n" +
-	"\amarkets\x18\x01 \x03(\v2\x0f.markets.MarketR\amarkets2\xc0\x01\n" +
+	"\amarkets\x18\x01 \x03(\v2\x0f.markets.MarketR\amarkets\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken2\xc0\x01\n" +
 	"\x15SpotInstrumentService\x12T\n" +
 	"\x0fViewMarketsByID\x12\x1f.markets.ViewMarketsByIDRequest\x1a .markets.ViewMarketsByIDResponse\x12Q\n" +
 	"\x0eViewMarketsAll\x12\x1e.markets.ViewMarketsAllRequest\x1a\x1f.markets.ViewMarketsAllResponseB\tZ\a/marketb\x06proto3"
 
 var (
-	file_market_markets_proto_rawDescOnce sync.Once
-	file_market_markets_proto_rawDescData []byte
+	file_markets_proto_rawDescOnce sync.Once
+	file_markets_proto_rawDescData []byte
 )
 
-func file_market_markets_proto_rawDescGZIP() []byte {
-	file_market_markets_proto_rawDescOnce.Do(func() {
-		file_market_markets_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_market_markets_proto_rawDesc), len(file_market_markets_proto_rawDesc)))
+func file_markets_proto_rawDescGZIP() []byte {
+	file_markets_proto_rawDescOnce.Do(func() {
+		file_markets_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_markets_proto_rawDesc), len(file_markets_proto_rawDesc)))
 	})
-	return file_market_markets_proto_rawDescData
+	return file_markets_proto_rawDescData
 }
 
-var file_market_markets_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
-var file_market_markets_proto_goTypes = []any{
+var file_markets_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_markets_proto_goTypes = []any{
 	(*Market)(nil),                  // 0: markets.Market
 	(*ViewMarketsByIDRequest)(nil),  // 1: markets.ViewMarketsByIDRequest
 	(*ViewMarketsByIDResponse)(nil), // 2: markets.ViewMarketsByIDResponse
 	(*ViewMarketsAllRequest)(nil),   // 3: markets.ViewMarketsAllRequest
 	(*ViewMarketsAllResponse)(nil),  // 4: markets.ViewMarketsAllResponse
 }
-var file_market_markets_proto_depIdxs = []int32{
+var file_markets_proto_depIdxs = []int32{
 	0, // 0: markets.ViewMarketsByIDResponse.market:type_name -> markets.Market
 	0, // 1: markets.ViewMarketsAllResponse.markets:type_name -> markets.Market
 	1, // 2: markets.SpotInstrumentService.ViewMarketsByID:input_type -> markets.ViewMarketsByIDRequest
@@ -312,26 +340,26 @@ var file_market_markets_proto_depIdxs = []int32{
 	0, // [0:2] is the sub-list for field type_name
 }
 
-func init() { file_market_markets_proto_init() }
-func file_market_markets_proto_init() {
-	if File_market_markets_proto != nil {
+func init() { file_markets_proto_init() }
+func file_markets_proto_init() {
+	if File_markets_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_market_markets_proto_rawDesc), len(file_market_markets_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_markets_proto_rawDesc), len(file_markets_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_market_markets_proto_goTypes,
-		DependencyIndexes: file_market_markets_proto_depIdxs,
-		MessageInfos:      file_market_markets_proto_msgTypes,
+		GoTypes:           file_markets_proto_goTypes,
+		DependencyIndexes: file_markets_proto_depIdxs,
+		MessageInfos:      file_markets_proto_msgTypes,
 	}.Build()
-	File_market_markets_proto = out.File
-	file_market_markets_proto_goTypes = nil
-	file_market_markets_proto_depIdxs = nil
+	File_markets_proto = out.File
+	file_markets_proto_goTypes = nil
+	file_markets_proto_depIdxs = nil
 }

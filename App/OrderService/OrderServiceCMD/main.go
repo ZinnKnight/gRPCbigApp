@@ -27,6 +27,8 @@ import (
 	"syscall"
 	"time"
 
+	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"google.golang.org/grpc"
 )
@@ -45,13 +47,17 @@ func main() {
 	}
 	defer logger.Sync()
 
-	poolCFG, err := pgxpool.ParseConfig(cfg.DatabaseURl)
+	poolCFG, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "pgxpool.ParseConfig: %v", err)
 		os.Exit(1)
 	}
 	poolCFG.MaxConns = 20
 	poolCFG.MinConns = 2
+	poolCFG.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+		pgxdecimal.Register(conn.TypeMap())
+		return nil
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -68,7 +74,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	rdb, err := redisClient.NewRedisClient(ctx, cfg.RedisPassword, cfg.RedisAddr, cfg.RedisDB)
+	rdb, err := redisClient.NewRedisClient(ctx, cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "redisClient.NewRedisClient: %v", err)
 		os.Exit(1)

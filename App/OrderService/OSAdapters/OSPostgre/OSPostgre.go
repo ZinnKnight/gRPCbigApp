@@ -2,8 +2,10 @@ package OSPostgre
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"gRPCbigapp/App/OrderService/OSDomain"
+	"gRPCbigapp/App/OrderService/OSPorts"
 	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/jackc/pgx/v5"
@@ -11,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-//var _ OSPorts.OSOutboundPorts = (*OrderRepo)(nil)
+var _ OSPorts.OSOutboundPorts = (*OrderRepo)(nil)
 
 type OrderRepo struct {
 	pool *pgxpool.Pool
@@ -38,7 +40,7 @@ func (or *OrderRepo) connection(ctx context.Context) dxExecute {
 
 func (or *OrderRepo) SaveOrder(ctx context.Context, order *OSDomain.OrderDomain) error {
 	const query = `INSERT INTO orders(order_id, user_id, market_id, price, ammount, order_status, created_at)
-VALUES $1, $2, $3, $4, $5, $6, $7`
+VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	_, err := or.connection(ctx).Exec(ctx, query, order.OrderID, order.UserID, order.MarketID, order.Price, order.Amount,
 		string(order.OrderStatus), order.CreatedAt,
 	)
@@ -48,16 +50,18 @@ VALUES $1, $2, $3, $4, $5, $6, $7`
 	return nil
 }
 
-func (or *OrderRepo) FindByID(ctx context.Context, orderID string) (*OSDomain.OrderDomain, error) {
-	const query = `SELECT order_id, user_id, market_id, price, amount, order_status, created at FROM orders WHERE order_id = $1`
-	rows := or.connection(ctx).QueryRow(ctx, query, orderID)
+func (or *OrderRepo) FindByID(ctx context.Context, orderID, userID string) (*OSDomain.OrderDomain, error) {
+	const query = `SELECT order_id, user_id, market_id, price, amount, order_status, created_at 
+	FROM orders 
+	WHERE order_id = $1 AND user_id = $2`
+	rows := or.connection(ctx).QueryRow(ctx, query, orderID, userID)
 
 	var order OSDomain.OrderDomain
 	var status string
-	err := rows.Scan(&order.OrderID, &order.UserID, &order.MarketID, &order.Price, &order.Amount, &order.CreatedAt)
+	err := rows.Scan(&order.OrderID, &order.UserID, &order.MarketID, &order.Price, &order.Amount, &order.OrderStatus, &order.CreatedAt)
 
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, OSDomain.ErrOrderNotFound
 		}
 		return nil, fmt.Errorf("postgres, get order by id: %w", err)
@@ -68,7 +72,10 @@ func (or *OrderRepo) FindByID(ctx context.Context, orderID string) (*OSDomain.Or
 
 func (or *OrderRepo) FindAll(ctx context.Context, userID string) ([]*OSDomain.OrderDomain, error) {
 	const query = `SELECT order_id, user_id, market_id, price, amount, order_status,
-       created at FROM orders WHERE user_id = $1,ORDER BY created_at DESC`
+       created_at 
+	FROM orders 
+	WHERE user_id = $1
+	ORDER BY created_at ASC`
 	rows, err := or.connection(ctx).Query(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("postgres, get all orders: %w", err)
@@ -80,7 +87,7 @@ func (or *OrderRepo) FindAll(ctx context.Context, userID string) ([]*OSDomain.Or
 		var ord OSDomain.OrderDomain
 		var status string
 
-		if err := rows.Scan(ord.OrderID, ord.UserID, &ord.MarketID, &ord.Price, &ord.Amount, &ord.OrderStatus, &ord.CreatedAt); err != nil {
+		if err := rows.Scan(&ord.OrderID, &ord.UserID, &ord.MarketID, &ord.Price, &ord.Amount, &ord.OrderStatus, &ord.CreatedAt); err != nil {
 			return nil, fmt.Errorf("postgres, scan for all orders: %w", err)
 		}
 		ord.OrderStatus = OSDomain.OrderStatus(status)

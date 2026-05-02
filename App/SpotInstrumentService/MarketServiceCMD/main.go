@@ -33,6 +33,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	//If there will be decimals types - copy + stelise logic for it from orders service
+
 	logger, err := logAdapter.NewZapLogger()
 	if err != nil {
 		fmt.Println("Error initializing logger: %w", err)
@@ -43,7 +45,17 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURl)
+	//Example if will add numeric stuff like decimal in market service too
+	//
+	//poolCFG, err := pgxpool.ParseConfig(cfg.DatabaseURl)
+	//if err != nil { ... }
+	//poolCFG.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
+	//    pgxdecimal.Register(conn.TypeMap())
+	//    return nil
+	//}
+	//pool, err := pgxpool.NewWithConfig(ctx, poolCFG)
+
+	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		fmt.Println("Error initializing postgres pool: %w", err)
 		os.Exit(1)

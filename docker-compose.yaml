@@ -52,7 +52,8 @@ services:
       METRICS_PORT: "2112"
       JWT_SECRET: "change-me-in-production"
       OUTBOX_POLL_INTERVAL: "5"
-      OUTBOX_BATCH_SIZE: "100"
+      OUTBOX_BUTCH_SIZE: "100"
+      RATE_LIMIT_PER_MIN: "100"
 
   market-service:
     build:

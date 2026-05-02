@@ -50,8 +50,15 @@ func (h *SISgrpcHandler) ViewMarketByID(ctx context.Context, req *marketpb.ViewM
 	}, nil
 }
 
-func (h *SISgrpcHandler) ViewAllMarkets(ctx context.Context, _ *marketpb.ViewMarketsAllRequest) (*marketpb.ViewMarketsAllResponse, error) {
-	markets, err := h.useCase.GetAllMarkets(ctx)
+func (h *SISgrpcHandler) ViewAllMarkets(ctx context.Context, req *marketpb.ViewMarketsAllRequest) (*marketpb.ViewMarketsAllResponse, error) {
+	size := int(req.PageSize)
+	if size <= 0 || size > 50 {
+		size = 10
+	}
+
+	curs := req.PageToken
+
+	markets, nextCurs, err := h.useCase.GetAllMarkets(ctx, size, curs)
 	if err != nil {
 		h.logger.LogError("sisgrpcAdapter, failed to view all markets",
 			LoggerPorts.Fieled{Key: "error", Value: err.Error()},
@@ -60,11 +67,12 @@ func (h *SISgrpcHandler) ViewAllMarkets(ctx context.Context, _ *marketpb.ViewMar
 	}
 
 	pbMarkets := make([]*marketpb.Market, 0, len(markets))
+
 	for _, market := range markets {
 		pbMarkets = append(pbMarkets, &marketpb.Market{
 			MarketId: market.MarketID,
 			Enable:   market.Accessibility,
 		})
 	}
-	return &marketpb.ViewMarketsAllResponse{Markets: pbMarkets}, nil
+	return &marketpb.ViewMarketsAllResponse{Markets: pbMarkets, NextPageToken: nextCurs}, nil
 }

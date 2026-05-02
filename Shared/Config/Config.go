@@ -7,7 +7,7 @@ import (
 )
 
 type Config struct {
-	DatabaseURl     string
+	DatabaseURL     string
 	RedisAddr       string
 	RedisPassword   string
 	RedisDB         int
@@ -21,17 +21,16 @@ type Config struct {
 
 func LoadConfig() (*Config, error) {
 	cfg := &Config{
-		// TODO normal routing and combination with docker-compose + fallbacks
-		DatabaseURl:     os.Getenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/gRPCbigApp"),
-		RedisAddr:       os.Getenv("REDIS_URL", "localhost:6379"),
-		RedisPassword:   os.Getenv("REDIS_PASSWORD", ""),
-		RedisDB:         os.Getenv("REDIS_DB", 0),
-		GRPCPort:        os.Getenv("GRPC_PORT", 50051),
-		MetricsPort:     os.Getenv("MetricsPort", 2112),
-		JWTSecretKey:    os.Getenv("JWT_SECRET", ""),
-		OutBoxInterval:  os.Getenv("OUTBOX_POLL_INTERVAL", 5),
-		OutBoxButchSize: os.Getenv("OUTBOX_BUTCH_SIZE", 10),
-		RateLimitPerMin: os.Getenv("RATE_LIMIT_PER_MIN", 100),
+		DatabaseURL:     getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/gRPCbigApp"),
+		RedisAddr:       getEnv("REDIS_ADDR", "localhost:6379"),
+		RedisPassword:   getEnv("REDIS_PASSWORD", ""),
+		RedisDB:         getEnvInt("REDIS_DB", 0),
+		GRPCPort:        getEnvInt("GRPC_PORT", 50051),
+		MetricsPort:     getEnvInt("MetricsPort", 2112),
+		JWTSecretKey:    getEnv("JWT_SECRET", ""),
+		OutBoxInterval:  getEnvInt("OUTBOX_POLL_INTERVAL", 5),
+		OutBoxButchSize: getEnvInt("OUTBOX_BUTCH_SIZE", 10),
+		RateLimitPerMin: getEnvInt("RATE_LIMIT_PER_MIN", 100),
 	}
 
 	if cfg.JWTSecretKey == "" {
@@ -40,7 +39,7 @@ func LoadConfig() (*Config, error) {
 	return cfg, nil
 }
 
-// nums for outbox quite random, need more examples of real code for figure outing
+// nums for outbox are standard, no big thoughts here
 
 func getEnv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {

@@ -11,13 +11,17 @@ service OrderService {
   rpc GetOrderStatusAll(OrderStatusAllRequest) returns (OrderStatusAllResponse);
 }
 
+message OrderStatusStruct {
+  string order_id = 1;
+  string status = 2;
+}
+
 
 message CreateOrderRequest {
-  string market_id = 2;
-  string order_type = 3;
-  double price = 4;
-  double quantity = 5;
-  string token = 6;
+  string market_id = 1;
+  string order_type = 2;
+  string price = 3;
+  string quantity = 4;
 }
 
 message CreateOrderResponse {
@@ -27,7 +31,6 @@ message CreateOrderResponse {
 
 message OrderStatusByIDRequest {
   string order_id = 1;
-  string token = 2;
 }
 
 message OrderStatusByIDResponse {
@@ -36,15 +39,15 @@ message OrderStatusByIDResponse {
 }
 
 message OrderStatusAllRequest {
-  string token = 1;
+  int32 page_size = 1;
+  string page_token = 2;
 }
 
 message OrderStatusAllResponse {
-  repeated string order_id = 1;
-  repeated string order_status = 2;
+  repeated OrderStatusStruct orders = 1;
+  string next_page_token = 2;
 }
 
 message StreamOrderRequest {
   string order_id = 1;
-  string token = 2;
 }
