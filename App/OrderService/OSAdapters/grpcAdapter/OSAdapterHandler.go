@@ -75,12 +75,19 @@ func (o *OrderHandler) GetOrderStatusByID(ctx context.Context, req *orderpb.Orde
 }
 
 func (o *OrderHandler) GetAllOrderStatuses(ctx context.Context, req *orderpb.OrderStatusAllRequest) (*orderpb.OrderStatusAllResponse, error) {
+	size := int(req.PageSize)
+	if size <= 0 || size > 100 {
+		size = 20
+	}
+
+	curs := req.PageToken
+
 	user, ok := AuthCTX.GetUser(ctx)
 	if !ok {
 		return nil, ErrUnauthenticated
 	}
 
-	orders, err := o.useCase.GetAllOrders(ctx, user.UserID)
+	orders, nextPageToken, err := o.useCase.GetAllOrders(ctx, user.UserID, curs, size)
 	if err != nil {
 		return nil, DomainErrorMapping(err)
 	}
@@ -95,6 +102,7 @@ func (o *OrderHandler) GetAllOrderStatuses(ctx context.Context, req *orderpb.Ord
 	}
 
 	return &orderpb.OrderStatusAllResponse{
-		Orders: protoOrders,
+		Orders:        protoOrders,
+		NextPageToken: nextPageToken,
 	}, nil
 }

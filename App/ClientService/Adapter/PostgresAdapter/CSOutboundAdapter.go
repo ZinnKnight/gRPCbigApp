@@ -2,6 +2,7 @@ package PostgresAdapter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"gRPCbigapp/App/ClientService/CSDomain"
 	"gRPCbigapp/App/ClientService/CSPorts"
@@ -55,7 +56,7 @@ func (rc *UserRepo) GetUser(ctx context.Context, userID string) (*CSDomain.User,
 	var user CSDomain.User
 	var role string
 	if err := row.Scan(&user.UserID, &user.UserName, &user.UserPassword, &role); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, CSDomain.ErrUserNotFound
 		}
 		return nil, fmt.Errorf("postgres, error find user: %w", err)
@@ -79,7 +80,7 @@ func (rc *UserRepo) IsAdmin(ctx context.Context, userID string) (bool, error) {
 
 	var role string
 	if err := row.Scan(&role); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return false, CSDomain.ErrUserNotFound
 		}
 		return false, fmt.Errorf("postgres, error isAdmin: %w", err)

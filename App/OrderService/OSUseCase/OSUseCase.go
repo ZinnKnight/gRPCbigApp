@@ -42,8 +42,8 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 		"order_id":  order.OrderID,
 		"user_id":   order.UserID,
 		"market_id": order.MarketID,
-		"price":     order.Price,
-		"amount":    order.Amount,
+		"price":     order.Price.String(),
+		"amount":    order.Amount.String(),
 		"status":    string(order.OrderStatus),
 	})
 	if err != nil {
@@ -92,10 +92,18 @@ func (osu *OSUseCase) GetOrderByID(ctx context.Context, orderID, userID string) 
 	return order, nil
 }
 
-func (osu *OSUseCase) GetAllOrders(ctx context.Context, userID string) ([]*OSDomain.OrderDomain, error) {
-	orders, err := osu.repo.FindAll(ctx, userID)
+func (osu *OSUseCase) GetAllOrders(ctx context.Context, userID, pageToken string, pageSize int) ([]*OSDomain.OrderDomain, string, error) {
+	orders, err := osu.repo.FindAll(ctx, userID, pageToken, pageSize+1)
 	if err != nil {
-		return nil, fmt.Errorf("usecase, fail in getting all orders: %v", err)
+		return nil, "", fmt.Errorf("usecase, fail in getting all orders: %v", err)
 	}
-	return orders, nil
+
+	var next string
+
+	if len(orders) > pageSize {
+		next = orders[pageSize-1].OrderID
+		orders = orders[:pageSize]
+	}
+
+	return orders, next, nil
 }

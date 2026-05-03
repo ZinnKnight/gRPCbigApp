@@ -2,6 +2,7 @@ package Postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"gRPCbigapp/App/SpotInstrumentService/SISDomain"
 	"gRPCbigapp/Shared/Txmanager"
@@ -40,7 +41,7 @@ func (sisr *SISMarketRepo) FindByID(ctx context.Context, marketId string) (*SISD
 
 	var m SISDomain.MarketDomain
 	if err := row.Scan(&m.MarketID, &m.GoodsID, &m.Accessibility, &m.TTL); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, SISDomain.ErrMarketNotFound
 		}
 		return nil, fmt.Errorf("SISMarketRepo, find market FindById: %w", err)

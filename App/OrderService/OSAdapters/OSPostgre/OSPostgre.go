@@ -39,7 +39,7 @@ func (or *OrderRepo) connection(ctx context.Context) dxExecute {
 }
 
 func (or *OrderRepo) SaveOrder(ctx context.Context, order *OSDomain.OrderDomain) error {
-	const query = `INSERT INTO orders(order_id, user_id, market_id, price, ammount, order_status, created_at)
+	const query = `INSERT INTO orders(order_id, user_id, market_id, price, amount, order_status, created_at)
 VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	_, err := or.connection(ctx).Exec(ctx, query, order.OrderID, order.UserID, order.MarketID, order.Price, order.Amount,
 		string(order.OrderStatus), order.CreatedAt,
@@ -57,8 +57,14 @@ func (or *OrderRepo) FindByID(ctx context.Context, orderID, userID string) (*OSD
 	rows := or.connection(ctx).QueryRow(ctx, query, orderID, userID)
 
 	var order OSDomain.OrderDomain
-	var status string
-	err := rows.Scan(&order.OrderID, &order.UserID, &order.MarketID, &order.Price, &order.Amount, &order.OrderStatus, &order.CreatedAt)
+	err := rows.Scan(
+		&order.OrderID,
+		&order.UserID,
+		&order.MarketID,
+		&order.Price,
+		&order.Amount,
+		&order.OrderStatus,
+		&order.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -66,17 +72,18 @@ func (or *OrderRepo) FindByID(ctx context.Context, orderID, userID string) (*OSD
 		}
 		return nil, fmt.Errorf("postgres, get order by id: %w", err)
 	}
-	order.OrderStatus = OSDomain.OrderStatus(status)
+	order.OrderStatus = OSDomain.OrderStatus(order.OrderStatus)
 	return &order, nil
 }
 
-func (or *OrderRepo) FindAll(ctx context.Context, userID string) ([]*OSDomain.OrderDomain, error) {
+func (or *OrderRepo) FindAll(ctx context.Context, userID, pageToken string, pageSize int) ([]*OSDomain.OrderDomain, error) {
 	const query = `SELECT order_id, user_id, market_id, price, amount, order_status,
        created_at 
 	FROM orders 
-	WHERE user_id = $1
-	ORDER BY created_at ASC`
-	rows, err := or.connection(ctx).Query(ctx, query, userID)
+	WHERE user_id = $1 AND order_id > $2
+	ORDER BY order_id ASC 
+	LIMIT $3`
+	rows, err := or.connection(ctx).Query(ctx, query, userID, pageToken, pageSize)
 	if err != nil {
 		return nil, fmt.Errorf("postgres, get all orders: %w", err)
 	}
@@ -85,12 +92,10 @@ func (or *OrderRepo) FindAll(ctx context.Context, userID string) ([]*OSDomain.Or
 	var orders []*OSDomain.OrderDomain
 	for rows.Next() {
 		var ord OSDomain.OrderDomain
-		var status string
 
 		if err := rows.Scan(&ord.OrderID, &ord.UserID, &ord.MarketID, &ord.Price, &ord.Amount, &ord.OrderStatus, &ord.CreatedAt); err != nil {
 			return nil, fmt.Errorf("postgres, scan for all orders: %w", err)
 		}
-		ord.OrderStatus = OSDomain.OrderStatus(status)
 		orders = append(orders, &ord)
 	}
 	return orders, rows.Err()
