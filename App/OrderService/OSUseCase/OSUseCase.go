@@ -47,7 +47,7 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 		"status":    string(order.OrderStatus),
 	})
 	if err != nil {
-		return "", fmt.Errorf("usecase, fail in marshaling order: %v", err)
+		return "", fmt.Errorf("usecase, fail in marshaling order: %w", err)
 	}
 
 	event := &Outbox2.Event{
@@ -87,7 +87,7 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 func (osu *OSUseCase) GetOrderByID(ctx context.Context, orderID, userID string) (*OSDomain.OrderDomain, error) {
 	order, err := osu.repo.FindByID(ctx, orderID, userID)
 	if err != nil {
-		return nil, fmt.Errorf("usecase, fail in getting order: %v", err)
+		return nil, fmt.Errorf("usecase, fail in getting order: %w", err)
 	}
 	return order, nil
 }
@@ -95,7 +95,7 @@ func (osu *OSUseCase) GetOrderByID(ctx context.Context, orderID, userID string) 
 func (osu *OSUseCase) GetAllOrders(ctx context.Context, userID, pageToken string, pageSize int) ([]*OSDomain.OrderDomain, string, error) {
 	orders, err := osu.repo.FindAll(ctx, userID, pageToken, pageSize+1)
 	if err != nil {
-		return nil, "", fmt.Errorf("usecase, fail in getting all orders: %v", err)
+		return nil, "", fmt.Errorf("usecase, fail in getting all orders: %w", err)
 	}
 
 	var next string

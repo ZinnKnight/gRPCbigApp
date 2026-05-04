@@ -72,7 +72,6 @@ func (or *OrderRepo) FindByID(ctx context.Context, orderID, userID string) (*OSD
 		}
 		return nil, fmt.Errorf("postgres, get order by id: %w", err)
 	}
-	order.OrderStatus = OSDomain.OrderStatus(order.OrderStatus)
 	return &order, nil
 }
 
