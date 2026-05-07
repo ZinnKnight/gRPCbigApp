@@ -30,6 +30,7 @@ import (
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -97,6 +98,7 @@ func main() {
 	clientHandler := clientGRPC.NewUserhandler(clientUseCase, logger, jwtService)
 
 	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			PanicInterceptor.PanicRecoveryInterceptor(logger),
 			Metrics2.UnaryServerInterceptor(),

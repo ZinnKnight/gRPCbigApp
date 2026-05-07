@@ -1,6 +1,9 @@
 package Outbox
 
-import "time"
+import (
+	tracing "gRPCbigapp/Shared/Tracing"
+	"time"
+)
 
 type Event struct {
 	ID             int64 // autoincrement
@@ -12,4 +15,5 @@ type Event struct {
 	CreatedAt      time.Time
 	PublishedAt    *time.Time
 	RetryCount     int
+	TraceContext   tracing.TraceCarier
 }

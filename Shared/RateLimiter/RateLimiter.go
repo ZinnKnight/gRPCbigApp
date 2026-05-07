@@ -5,8 +5,12 @@ import (
 	"fmt"
 	"time"
 
+	tracing "gRPCbigapp/Shared/Tracing"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel/attribute"
 )
+
+var tracer = tracing.Tracer("ratelimiter.redis")
 
 type Limiter struct {
 	rdb           *redis.Client
@@ -29,6 +33,11 @@ func NewRateLimiter(rdb *redis.Client, limit int, slidingWindow time.Duration) *
 }
 
 func (rl *Limiter) Allow(ctx context.Context, userID string) (*RateLimiterRes, error) {
+	ctx, span := tracer.Start(ctx, "ratelimiter.Allow", tracing.KindClient)
+	defer span.End()
+	span.SetAttributes(tracing.RedisDB("INCR")...)
+	span.SetAttributes(attribute.String("user.id", userID))
+
 	key := fmt.Sprintf("rate_limit:%s", userID)
 
 	count, err := rl.rdb.Incr(ctx, key).Result()
@@ -42,12 +51,25 @@ func (rl *Limiter) Allow(ctx context.Context, userID string) (*RateLimiterRes, e
 
 	if count > int64(rl.limit) {
 		ttl, _ := rl.rdb.TTL(ctx, key).Result()
+
+		span.SetAttributes(
+			attribute.Bool("ratelimit.allowed", false),
+			attribute.Int64("ratelimit.count", count),
+		)
+
+		span.AddEvent("rate_limit_exceeded")
+
 		return &RateLimiterRes{
 			Allowed:    false,
 			Remaining:  0,
 			RetryAfter: ttl,
 		}, nil
 	}
+
+	span.SetAttributes(attribute.Bool("ratelimit.allowed", true),
+		attribute.Int64("ratelimit.count", count),
+	)
+
 	return &RateLimiterRes{
 		Allowed:   true,
 		Remaining: rl.limit - int(count),

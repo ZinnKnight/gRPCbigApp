@@ -8,11 +8,20 @@ import (
 	"gRPCbigapp/App/OrderService/OSPorts"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	Outbox2 "gRPCbigapp/Shared/Outbox"
+	"gRPCbigapp/Shared/Tracing"
 	"gRPCbigapp/Shared/Txmanager"
 	"time"
 
+	tracing "gRPCbigapp/Shared/Tracing"
+
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
+
+// weird name, but done to save a logick in Jaeger for filter
+var tracer = otel.Tracer("usecase.order")
 
 var _ OSPorts.OSInboundPort = (*OSUseCase)(nil)
 
@@ -33,10 +42,22 @@ func NewOSUseCase(repo OSPorts.OSOutboundPorts, outbox *Outbox2.Repository, txMa
 }
 
 func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (string, error) {
+
+	ctx, span := tracer.Start(ctx, "usecase.CreteOrder", Tracing.KindInternal)
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.String("user.id", cmd.UserID),
+		attribute.String("market.id", cmd.MarketID),
+	)
+
 	order, err := OSDomain.NewOrder(cmd.UserID, cmd.MarketID, cmd.Price, cmd.Quantity)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "domain validation")
 		return "", fmt.Errorf("usecase, fail in creating order: %w", err)
 	}
+	span.SetAttributes(attribute.String("order.id", order.OrderID))
 
 	payload, err := json.Marshal(map[string]interface{}{
 		"order_id":  order.OrderID,
@@ -57,6 +78,7 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 		Payload:        payload,
 		IdempotencyKey: uuid.New().String(),
 		CreatedAt:      time.Now(),
+		TraceContext:   tracing.PlaceIntoCar(ctx),
 	}
 
 	err = osu.txManager.Do(ctx, func(ctx context.Context) error {
