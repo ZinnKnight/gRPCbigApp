@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -18,6 +19,7 @@ import (
 )
 
 type Config struct {
+	logger         LoggerPorts.Logger
 	Endpoint       string
 	ServiceName    string
 	ServiceVersion string
@@ -64,8 +66,13 @@ func buildResorses(ctx context.Context, config Config) (*resource.Resource, erro
 type ShutDownTracing func(context.Context) error
 
 func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
+
+	logger := config.logger
+
 	if !config.Enabled {
 		otel.SetTextMapPropagator(defaultPropagator())
+		logInfo(logger, "tracing disabled, propagator only")
+		field("service.name", config.ServiceName)
 		return func(context.Context) error { return nil }, nil
 	}
 
@@ -75,9 +82,15 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 	if config.ServiceName == "" {
 		return nil, fmt.Errorf("no tracing service name provided")
 	}
+	if logger != nil {
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			logger.LogError("otel sdk runtime error", LoggerPorts.Fieled{Key: "error", Value: err.Error()})
+		}))
+	}
 
 	res, err := buildResorses(ctx, config)
 	if err != nil {
+		logErr(logger, "tracing: failed to build resorses", err)
 		return nil, fmt.Errorf("failed to build resorses: %w", err)
 	}
 
@@ -89,6 +102,7 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 		otlptracegrpc.WithTimeout(5*time.Second),
 	)
 	if err != nil {
+		logErr(logger, "tracing: otlp exporter failed", err, field("endpoint", config.Endpoint))
 		return nil, fmt.Errorf("failed to init OTLP tracing: %w", err)
 	}
 
@@ -110,10 +124,48 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 	otel.SetTracerProvider(traceProvider)
 	otel.SetTextMapPropagator(defaultPropagator())
 
+	logInfo(logger, "tracing: initialized",
+		field("service.name", config.ServiceName),
+		field("service.version", config.ServiceVersion),
+		field("environment", config.Environment),
+		field("sample_ratio", config.SampleRatio),
+		field("endpoint", config.Endpoint),
+	)
+
 	return func(shutCTX context.Context) error {
 		if err := traceProvider.Shutdown(shutCTX); err != nil {
-			fmt.Printf("failed to shutdown OTLP tracing: %v", err)
+			logErr(logger, "tracing: failed to shutdown tracing", err)
+		}
+
+		shutDownErr := errors.Join(
+			traceProvider.Shutdown(shutCTX),
+			exp.Shutdown(shutCTX),
+		)
+
+		if shutDownErr != nil {
+			logErr(logger, "tracing: failed to shutdown tracing", shutDownErr)
+		} else {
+			logInfo(logger, "tracing: shutdown succeeded")
 		}
 		return errors.Join(traceProvider.Shutdown(shutCTX), exp.Shutdown(shutCTX))
 	}, nil
+}
+
+func field(k string, v interface{}) LoggerPorts.Fieled {
+	return LoggerPorts.Fieled{Key: k, Value: v}
+}
+
+func logInfo(l LoggerPorts.Logger, msg string, fields ...LoggerPorts.Fieled) {
+	if l == nil {
+		return
+	}
+	l.LogInfo(msg, fields...)
+}
+
+func logErr(l LoggerPorts.Logger, msg string, err error, extra ...LoggerPorts.Fieled) {
+	if l == nil {
+		return
+	}
+	all := append([]LoggerPorts.Fieled{{Key: "error", Value: err.Error()}}, extra...)
+	l.LogError(msg, all...)
 }
