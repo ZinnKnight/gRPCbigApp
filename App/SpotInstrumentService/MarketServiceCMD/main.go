@@ -10,6 +10,7 @@ import (
 	"gRPCbigapp/Shared/PanicInterceptor"
 	RateLimiter2 "gRPCbigapp/Shared/RateLimiter"
 	redisClient "gRPCbigapp/Shared/Redis"
+	tracing "gRPCbigapp/Shared/Tracing"
 	"net"
 	"os"
 	"os/signal"
@@ -22,6 +23,7 @@ import (
 	marketPB "gRPCbigapp/Proto/market"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 )
 
@@ -44,6 +46,26 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	tracingShutDown, err := tracing.Init(ctx, tracing.Config{
+		Endpoint:       cfg.OpenTelemetryEndpoint,
+		ServiceName:    cfg.ServiceName,
+		ServiceVersion: cfg.ServiceVersion,
+		Environment:    cfg.Environment,
+		SampleRatio:    cfg.TracingSampleRatio,
+		Enabled:        cfg.TracingEnabled,
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "Error initializing tracing: %w", err)
+		os.Exit(1)
+	}
+	defer func() {
+		shCTX, shCancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer shCancel()
+		if err := tracingShutDown(shCTX); err != nil {
+			fmt.Fprintln(os.Stderr, "Error shutting down tracing: %w", err)
+		}
+	}()
 
 	//Example if will add numeric stuff like decimal in market service too
 	//
@@ -81,6 +103,7 @@ func main() {
 	limiter := RateLimiter2.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
 
 	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			PanicInterceptor.PanicRecoveryInterceptor(logger),
 			Metrics2.UnaryServerInterceptor(),
