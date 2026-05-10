@@ -17,6 +17,13 @@ type Config struct {
 	OutBoxInterval  int
 	OutBoxButchSize int
 	RateLimitPerMin int
+	// for Jaeger
+	ServiceName           string
+	ServiceVersion        string
+	Environment           string
+	OpenTelemetryEndpoint string
+	TracingEnabled        bool
+	TracingSampleRatio    float64
 }
 
 func LoadConfig() (*Config, error) {
@@ -31,6 +38,13 @@ func LoadConfig() (*Config, error) {
 		OutBoxInterval:  getEnvInt("OUTBOX_POLL_INTERVAL", 5),
 		OutBoxButchSize: getEnvInt("OUTBOX_BUTCH_SIZE", 10),
 		RateLimitPerMin: getEnvInt("RATE_LIMIT_PER_MIN", 100),
+		// for Jaeger
+		ServiceName:           getEnv("SERVICE_NAME", "unknown service"),
+		ServiceVersion:        getEnv("SERVICE_VERSION", "dev"),
+		Environment:           getEnv("ENVIRONMENT", "local"),
+		OpenTelemetryEndpoint: getEnv("OPEN_TELEMETRY_ENDPOINT", "jaeger:4317"), // default
+		TracingEnabled:        getEnvBool("TRACING_ENABLED", true),
+		TracingSampleRatio:    getEnvFloat("TRACING_SAMPLE_RATIO", 1.0),
 	}
 
 	if cfg.JWTSecretKey == "" {
@@ -58,4 +72,28 @@ func getEnvInt(key string, fallback int) int {
 		return fallback
 	}
 	return i
+}
+
+func getEnvFloat(key string, fallback float64) float64 {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	f, err := strconv.ParseFloat(v, 64)
+	if err != nil {
+		return fallback
+	}
+	return f
+}
+
+func getEnvBool(key string, fallback bool) bool {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		return fallback
+	}
+	return b
 }

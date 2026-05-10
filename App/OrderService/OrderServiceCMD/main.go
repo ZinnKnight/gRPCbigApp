@@ -20,6 +20,7 @@ import (
 	"gRPCbigapp/Shared/PanicInterceptor"
 	RateLimiter2 "gRPCbigapp/Shared/RateLimiter"
 	redisClient "gRPCbigapp/Shared/Redis"
+	tracing "gRPCbigapp/Shared/Tracing"
 	"gRPCbigapp/Shared/Txmanager"
 	"net"
 	"os"
@@ -35,6 +36,9 @@ import (
 )
 
 func main() {
+	const MaxConns = 20
+	const MinConns = 2
+
 	cfg, err := Config.LoadConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "config: %v", err)
@@ -48,20 +52,40 @@ func main() {
 	}
 	defer logger.Sync()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	tracingShutDown, err := tracing.Init(ctx, tracing.Config{
+		Endpoint:       cfg.OpenTelemetryEndpoint,
+		ServiceName:    cfg.ServiceName,
+		ServiceVersion: cfg.ServiceVersion,
+		Environment:    cfg.Environment,
+		SampleRatio:    cfg.TracingSampleRatio,
+		Enabled:        cfg.TracingEnabled,
+	})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "tracing: %v", err)
+		os.Exit(1)
+	}
+	defer func() {
+		shCTX, shCancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer shCancel()
+		if err := tracingShutDown(shCTX); err != nil {
+			fmt.Fprintf(os.Stderr, "tracing: %v\n", err)
+		}
+	}()
+
 	poolCFG, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "pgxpool.ParseConfig: %v", err)
 		os.Exit(1)
 	}
-	poolCFG.MaxConns = 20
-	poolCFG.MinConns = 2
+	poolCFG.MaxConns = MaxConns
+	poolCFG.MinConns = MinConns
 	poolCFG.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 		pgxdecimal.Register(conn.TypeMap())
 		return nil
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCFG)
 	if err != nil {

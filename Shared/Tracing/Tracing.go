@@ -19,7 +19,7 @@ import (
 )
 
 type Config struct {
-	logger         LoggerPorts.Logger
+	Logger         LoggerPorts.Logger
 	Endpoint       string
 	ServiceName    string
 	ServiceVersion string
@@ -66,8 +66,7 @@ func buildResorses(ctx context.Context, config Config) (*resource.Resource, erro
 type ShutDownTracing func(context.Context) error
 
 func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
-
-	logger := config.logger
+	logger := config.Logger
 
 	if !config.Enabled {
 		otel.SetTextMapPropagator(defaultPropagator())
