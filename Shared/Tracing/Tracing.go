@@ -132,7 +132,9 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 	)
 
 	return func(shutCTX context.Context) error {
-		if err := traceProvider.Shutdown(shutCTX); err != nil {
+		flushCTX, flushCancel := context.WithTimeout(shutCTX, time.Second*3)
+		defer flushCancel()
+		if err := traceProvider.ForceFlush(flushCTX); err != nil {
 			logErr(logger, "tracing: failed to shutdown tracing", err)
 		}
 
@@ -146,7 +148,7 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 		} else {
 			logInfo(logger, "tracing: shutdown succeeded")
 		}
-		return errors.Join(traceProvider.Shutdown(shutCTX), exp.Shutdown(shutCTX))
+		return shutDownErr
 	}, nil
 }
 
