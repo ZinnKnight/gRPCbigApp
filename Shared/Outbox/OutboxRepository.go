@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tracing "gRPCbigapp/Shared/Tracing"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -28,7 +29,7 @@ func (r *Repository) SaveEvent(ctx context.Context, event *Event) error {
 
 	const query = `
 		INSERT INTO outbox_events (aggregate_type, aggregate_id, event_type, payload, idempotency_key, created_at, trace_context) 
-		VALUES $1, $2, $3, $4, $5, $6, $7`
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
 	span.SetAttributes(tracing.PostgresDB(query)...)
 
@@ -44,7 +45,7 @@ func (r *Repository) SaveEvent(ctx context.Context, event *Event) error {
 			event.IdempotencyKey, event.CreatedAt, ctxTraceJSON,
 		)
 	} else {
-		_, err = tx.Exec(ctx, query, event.AggregatorType, event.AggregatorID, event.EventType, event.Payload,
+		_, err = r.pool.Exec(ctx, query, event.AggregatorType, event.AggregatorID, event.EventType, event.Payload,
 			event.IdempotencyKey, event.CreatedAt, ctxTraceJSON,
 		)
 	}
@@ -98,13 +99,13 @@ func (r *Repository) FetchUnpublished(ctx context.Context, butchSize int) ([]*Ev
 }
 
 func (r *Repository) MarkPublished(ctx context.Context, eventID int64) error {
-	const query = `UPDATE outbox_events SET published_at = retry_count = $1 WHERE id = $2`
+	const query = `UPDATE outbox_events SET published_at = $1 WHERE id = $2`
 
 	ctx, span := tracer.Start(ctx, "outbox.MarkPublished", tracing.KindClient)
 	defer span.End()
 	span.SetAttributes(tracing.PostgresDB(query)...)
 
-	_, err := r.pool.Exec(ctx, query, time.Now(), eventID)
+	_, err := r.pool.Exec(ctx, query, eventID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "mark publisher execution fail")

@@ -70,8 +70,8 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 
 	if !config.Enabled {
 		otel.SetTextMapPropagator(defaultPropagator())
-		logInfo(logger, "tracing disabled, propagator only")
-		field("service.name", config.ServiceName)
+		logInfo(logger, "tracing disabled, propagator only",
+			field("service.name", config.ServiceName))
 		return func(context.Context) error { return nil }, nil
 	}
 

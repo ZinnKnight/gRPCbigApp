@@ -33,6 +33,16 @@ services:
       order-service:
         condition: service_started
 
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+    environment:
+      #old versions capability (tbh - not sure how it will works in normal prod version, but bcs its all-in-one, just on case)
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686" #Jaeger UI, just default
+      - "4317:4317" #OTLP grpc, we send our trce here
+      - "4318:4318" #OTLP HTTP, we dont have http, so just in case i guess?
+
   order-service:
     build:
       context: .
