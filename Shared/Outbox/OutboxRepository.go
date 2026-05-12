@@ -88,7 +88,7 @@ func (r *Repository) FetchUnpublished(ctx context.Context, butchSize int) ([]*Ev
 		}
 
 		if len(ctxTraceJSON) > 0 {
-			car := tracing.TraceCarier{}
+			car := tracing.TraceCarrier{}
 			if jerr := json.Unmarshal(ctxTraceJSON, &car); jerr == nil {
 				e.TraceContext = car
 			}

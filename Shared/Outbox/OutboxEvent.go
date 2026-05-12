@@ -15,5 +15,5 @@ type Event struct {
 	CreatedAt      time.Time
 	PublishedAt    *time.Time
 	RetryCount     int
-	TraceContext   tracing.TraceCarier
+	TraceContext   tracing.TraceCarrier
 }

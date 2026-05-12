@@ -8,11 +8,16 @@ import (
 	"gRPCbigapp/App/ClientService/CSPorts"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	Outbox2 "gRPCbigapp/Shared/Outbox"
+	tracing "gRPCbigapp/Shared/Tracing"
 	"gRPCbigapp/Shared/Txmanager"
 	"time"
 
 	"github.com/google/uuid"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
+
+var csUseCaseTrace = tracing.Tracer("usecase.client_service")
 
 var _ CSPorts.UserInboundPort = (*UserUseCase)(nil)
 
@@ -34,6 +39,12 @@ func NewUserUseCase(repo CSPorts.CSOutboundPorts, outbox *Outbox2.Repository, tx
 }
 
 func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUserInput) (*CSDomain.User, error) {
+
+	ctx, span := csUseCaseTrace.Start(ctx, "RegisterUser", tracing.KindInternal)
+	defer span.End()
+
+	span.SetAttributes(attribute.String("user.name", rui.UserName))
+
 	user := &CSDomain.User{
 		UserID:       uuid.New().String(),
 		UserName:     rui.UserName,
@@ -42,8 +53,11 @@ func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUse
 	}
 
 	if err := user.ValidateUser(); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "client_service.RegisterUser failed")
 		return nil, fmt.Errorf("usecase, user registration: %w", err)
 	}
+	span.SetAttributes(attribute.String("user.id", user.UserID))
 
 	payload, err := json.Marshal(map[string]interface{}{
 		"user_id":   user.UserID,
@@ -52,6 +66,8 @@ func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUse
 	})
 
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "json marshal failed")
 		return nil, fmt.Errorf("usecase, user marshaling: %w", err)
 	}
 
@@ -62,6 +78,7 @@ func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUse
 		Payload:        payload,
 		IdempotencyKey: uuid.New().String(),
 		CreatedAt:      time.Now(),
+		TraceContext:   tracing.PlaceIntoCar(ctx),
 	}
 
 	err = us.txManager.Do(ctx, func(ctx context.Context) error {
@@ -71,6 +88,8 @@ func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUse
 		return us.outbox.SaveEvent(ctx, event)
 	})
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "usecase.SaveUser failed")
 		us.logger.LogError("Usecase, failed to save user",
 			LoggerPorts.Fieled{Key: "id", Value: user.UserID},
 			LoggerPorts.Fieled{Key: "error", Value: err.Error()},
@@ -81,20 +100,48 @@ func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUse
 }
 
 func (us *UserUseCase) LoginUser(ctx context.Context, userID string) (*CSDomain.User, error) {
+
+	ctx, span := csUseCaseTrace.Start(ctx, "LoginUser", tracing.KindInternal)
+	defer span.End()
+
+	span.SetAttributes(attribute.String("user.id", userID))
+
 	user, err := us.repo.GetUser(ctx, userID)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "usecase.GetUser failed")
 		return nil, fmt.Errorf("usecase, logging user: %w", err)
 	}
 	return user, nil
 }
 
 func (us *UserUseCase) IsAdmin(ctx context.Context, userID string) (bool, error) {
-	return us.repo.IsAdmin(ctx, userID)
+	ctx, span := csUseCaseTrace.Start(ctx, "IsAdmin")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("user.id", userID))
+
+	isAdmin, err := us.repo.IsAdmin(ctx, userID)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "usecase.IsAdmin failed")
+		return false, err
+	}
+	span.SetAttributes(attribute.Bool("user.isAdmin", isAdmin))
+	return isAdmin, nil
 }
 
 func (us *UserUseCase) ChangeUserPlan(ctx context.Context, userID string, newPlan CSDomain.UserPlan) error {
-	return us.txManager.Do(ctx, func(ctx context.Context) error {
+
+	ctx, span := csUseCaseTrace.Start(ctx, "ChangeUserPlan", tracing.KindInternal)
+	defer span.End()
+
+	span.SetAttributes(attribute.String("user.id", userID), attribute.String("user.plan.new", string(newPlan)))
+
+	err := us.txManager.Do(ctx, func(ctx context.Context) error {
 		if err := us.repo.UpdateUserPlan(ctx, userID, newPlan); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "usecase.UpdateUserPlan failed")
 			return fmt.Errorf("usecase, user plan changing: %w", err)
 		}
 
@@ -112,6 +159,12 @@ func (us *UserUseCase) ChangeUserPlan(ctx context.Context, userID string, newPla
 			Payload:        payload,
 			IdempotencyKey: uuid.New().String(),
 			CreatedAt:      time.Now(),
+			TraceContext:   tracing.PlaceIntoCar(ctx),
 		})
 	})
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "usecase.UpdateUserPlan failed")
+	}
+	return err
 }
