@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func gRPCDial(ctx context.Context, target string, extra ...grpc.DialOption) (*grpc.ClientConn, error) {
+func GRPCDial(ctx context.Context, target string, extra ...grpc.DialOption) (*grpc.ClientConn, error) {
 	if target == "" {
 		return nil, fmt.Errorf("tracing: empty grpc address")
 	}

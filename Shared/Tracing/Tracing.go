@@ -39,7 +39,7 @@ func defaultPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func buildResorses(ctx context.Context, config Config) (*resource.Resource, error) {
+func buildResources(ctx context.Context, config Config) (*resource.Resource, error) {
 	attributes := []attribute.KeyValue{
 		attribute.String("service.name", config.ServiceName),
 	}
@@ -87,7 +87,7 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 		}))
 	}
 
-	res, err := buildResorses(ctx, config)
+	res, err := buildResources(ctx, config)
 	if err != nil {
 		logErr(logger, "tracing: failed to build resorses", err)
 		return nil, fmt.Errorf("failed to build resorses: %w", err)
@@ -111,7 +111,7 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 		sdktrace.WithBatcher(exp,
 			sdktrace.WithMaxQueueSize(2048),
 			sdktrace.WithMaxExportBatchSize(512),
-			sdktrace.WithExportTimeout(5*time.Second),
+			sdktrace.WithBatchTimeout(5*time.Second),
 		),
 
 		sdktrace.WithSampler(

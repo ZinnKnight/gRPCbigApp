@@ -28,10 +28,10 @@ func toKeyVal(dataIN []atributeKeyVal) []attribute.KeyValue {
 	return out
 }
 
-func PostgresDB(statment string) []attribute.KeyValue {
+func PostgresDB(statement string) []attribute.KeyValue {
 	return []attribute.KeyValue{
 		attribute.String("db.system", "postgresql"),
-		attribute.String("db.statement", statment),
+		attribute.String("db.statement", statement),
 	}
 }
 
@@ -46,8 +46,8 @@ func RedisDB(op string) []attribute.KeyValue {
 
 func OutboxMesseging(dest string) []attribute.KeyValue {
 	return []attribute.KeyValue{
-		attribute.String("messeging.system", "outbox"),
-		attribute.String("messeging.destination", dest),
-		attribute.String("messeging.operation", "publish"),
+		attribute.String("messaging.system", "outbox"),
+		attribute.String("messaging.destination.name", dest),
+		attribute.String("messaging.operation", "publish"),
 	}
 }

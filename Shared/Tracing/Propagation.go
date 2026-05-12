@@ -7,19 +7,19 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
-var _ propagation.TextMapCarrier = (TraceCarier)(nil)
+var _ propagation.TextMapCarrier = (TraceCarrier)(nil)
 
-type TraceCarier map[string]string
+type TraceCarrier map[string]string
 
-func (car TraceCarier) Get(key string) string {
+func (car TraceCarrier) Get(key string) string {
 	return car[key]
 }
 
-func (car TraceCarier) Set(key string, value string) {
+func (car TraceCarrier) Set(key string, value string) {
 	car[key] = value
 }
 
-func (car TraceCarier) Keys() []string {
+func (car TraceCarrier) Keys() []string {
 	keys := make([]string, 0, len(car))
 	for k := range car {
 		keys = append(keys, k)
@@ -27,13 +27,13 @@ func (car TraceCarier) Keys() []string {
 	return keys
 }
 
-func PlaceIntoCar(ctx context.Context) TraceCarier {
-	car := TraceCarier{}
+func PlaceIntoCar(ctx context.Context) TraceCarrier {
+	car := TraceCarrier{}
 	otel.GetTextMapPropagator().Inject(ctx, car)
 	return car
 }
 
-func TakeOutFromCar(ctx context.Context, car TraceCarier) context.Context {
+func TakeOutFromCar(ctx context.Context, car TraceCarrier) context.Context {
 	if len(car) == 0 {
 		return ctx
 	}

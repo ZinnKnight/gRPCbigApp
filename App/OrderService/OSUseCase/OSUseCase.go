@@ -8,7 +8,6 @@ import (
 	"gRPCbigapp/App/OrderService/OSPorts"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	Outbox2 "gRPCbigapp/Shared/Outbox"
-	"gRPCbigapp/Shared/Tracing"
 	"gRPCbigapp/Shared/Txmanager"
 	"time"
 
@@ -43,7 +42,7 @@ func NewOSUseCase(repo OSPorts.OSOutboundPorts, outbox *Outbox2.Repository, txMa
 
 func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (string, error) {
 
-	ctx, span := tracer.Start(ctx, "usecase.CreteOrder", Tracing.KindInternal)
+	ctx, span := tracer.Start(ctx, "usecase.CreteOrder", tracing.KindInternal)
 	defer span.End()
 
 	span.SetAttributes(
@@ -107,16 +106,30 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 }
 
 func (osu *OSUseCase) GetOrderByID(ctx context.Context, orderID, userID string) (*OSDomain.OrderDomain, error) {
+	ctx, span := tracer.Start(ctx, "usecase.GetOrderByID", tracing.KindInternal)
+	defer span.End()
+
+	span.SetAttributes(attribute.String("user.id", userID), attribute.String("order.id", orderID))
+
 	order, err := osu.repo.FindByID(ctx, orderID, userID)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "repo.FindByID validation")
 		return nil, fmt.Errorf("usecase, fail in getting order: %w", err)
 	}
 	return order, nil
 }
 
 func (osu *OSUseCase) GetAllOrders(ctx context.Context, userID, pageToken string, pageSize int) ([]*OSDomain.OrderDomain, string, error) {
+	ctx, span := tracer.Start(ctx, "usecase.GetAllOrders", tracing.KindInternal)
+	defer span.End()
+
+	span.SetAttributes(attribute.String("user.id", userID), attribute.Int("page.size", pageSize))
+
 	orders, err := osu.repo.FindAll(ctx, userID, pageToken, pageSize+1)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "repo.FindAll validation")
 		return nil, "", fmt.Errorf("usecase, fail in getting all orders: %w", err)
 	}
 
@@ -127,5 +140,6 @@ func (osu *OSUseCase) GetAllOrders(ctx context.Context, userID, pageToken string
 		orders = orders[:pageSize]
 	}
 
+	span.SetAttributes(attribute.Int("orders.returned.amount", len(orders)))
 	return orders, next, nil
 }

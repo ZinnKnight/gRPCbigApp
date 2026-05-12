@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-var relayTrancer = tracing.Tracer("outbox.relay")
+var relayTransfer = tracing.Tracer("outbox.relay")
 
 type Publisher interface {
 	Publish(ctx context.Context, event *Event) error
@@ -36,7 +36,7 @@ func NewRelay(repo *Repository, publisher Publisher, logger LoggerPorts.Logger, 
 
 func (r *Relay) batching(ctx context.Context) {
 
-	ctx, batchSpan := relayTrancer.Start(ctx, "outbox.realy.batching", tracing.KindInternal)
+	ctx, batchSpan := relayTransfer.Start(ctx, "outbox.relay.batching", tracing.KindInternal)
 	defer batchSpan.End()
 
 	events, err := r.repo.FetchUnpublished(ctx, r.batchSize)
@@ -48,21 +48,21 @@ func (r *Relay) batching(ctx context.Context) {
 		)
 		return
 	}
-	batchSpan.SetAttributes(attribute.Int("batch.Size", len(events)))
+	batchSpan.SetAttributes(attribute.Int("batch.size", len(events)))
 
 	for _, event := range events {
 
 		publishCtx := tracing.TakeOutFromCar(ctx, event.TraceContext)
-		publishCtx, publishSpan := relayTrancer.Start(publishCtx, "outbox.publish", tracing.KindProducer)
+		publishCtx, publishSpan := relayTransfer.Start(publishCtx, "outbox.publish", tracing.KindProducer)
 		publishSpan.SetAttributes(tracing.OutboxMesseging(event.EventType)...)
 		publishSpan.SetAttributes(
-			attribute.String("messaging.messege.id", event.IdempotencyKey),
+			attribute.String("messaging.message.id", event.IdempotencyKey),
 			attribute.String("aggregate.type", event.AggregatorType),
 			attribute.String("aggregator.id", event.AggregatorID),
 			attribute.Int64("outbox.event.id", event.ID),
 		)
 
-		if err := r.publisher.Publish(ctx, event); err != nil {
+		if err := r.publisher.Publish(publishCtx, event); err != nil {
 			publishSpan.RecordError(err)
 			publishSpan.SetStatus(codes.Error, "publish failed")
 			r.logger.LogError("Outbox Publish failed",
@@ -70,12 +70,12 @@ func (r *Relay) batching(ctx context.Context) {
 				LoggerPorts.Fieled{Key: "event_type", Value: event.EventType},
 				LoggerPorts.Fieled{Key: "error", Value: err.Error()},
 			)
-			_ = r.repo.IncrementRetry(ctx, event.ID)
+			_ = r.repo.IncrementRetry(publishCtx, event.ID)
 			publishSpan.End()
 			continue
 		}
 
-		if err := r.repo.MarkPublished(ctx, event.ID); err != nil {
+		if err := r.repo.MarkPublished(publishCtx, event.ID); err != nil {
 			r.logger.LogError("Outbox MarkPublished failed",
 				LoggerPorts.Fieled{Key: "even_id", Value: event.ID},
 				LoggerPorts.Fieled{Key: "error", Value: err.Error()})
