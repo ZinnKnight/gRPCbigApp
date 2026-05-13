@@ -56,6 +56,12 @@ services:
       redis:
         condition: service_healthy
     environment:
+      SERVICE_NAME: "order-service"
+      SERVICE_VERSION: "0.0.1" #i remember that stuff about versions, but im not sure its matter there
+      ENVIRONMENT: "dev" #dev forever
+      OPEN_TELEMETRY_ENDPOINT: "jaeger:4317"
+      TRACING_ENABLED: "true"
+      TRACING_SAMPLE_RATION: "0.2"
       DATABASE_URL: "postgres://postgres:postgres@postgres:5432/gRPCbigApp"
       REDIS_ADDR: "redis:6379"
       GRPC_PORT: "50051"
@@ -77,7 +83,15 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      jaeger:
+        condition: service_started
     environment:
+      SERVICE_NAME: "market-service"
+      SERVICE_VERSION: "0.0.1" #i remember that stuff about versions, but im not sure its matter there
+      ENVIRONMENT: "dev" #dev forever
+      OPEN_TELEMETRY_ENDPOINT: "jaeger:4317"
+      TRACING_ENABLED: "true"
+      TRACING_SAMPLE_RATION: "0.2"
       DATABASE_URL: "postgres://postgres:postgres@postgres:5432/gRPCbigApp"
       REDIS_ADDR: "redis:6379"
       GRPC_PORT: "50052"

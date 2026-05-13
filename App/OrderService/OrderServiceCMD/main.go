@@ -62,6 +62,7 @@ func main() {
 		Environment:    cfg.Environment,
 		SampleRatio:    cfg.TracingSampleRatio,
 		Enabled:        cfg.TracingEnabled,
+		Logger:         logger,
 	})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "tracing: %v", err)

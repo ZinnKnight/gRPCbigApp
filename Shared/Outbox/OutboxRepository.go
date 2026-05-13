@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gRPCbigapp/Shared/Txmanager"
-	"time"
-
 	tracing "gRPCbigapp/Shared/Tracing"
+	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel/codes"
@@ -45,7 +43,7 @@ func (r *Repository) SaveEvent(ctx context.Context, event *Event) error {
 			event.IdempotencyKey, event.CreatedAt, ctxTraceJSON,
 		)
 	} else {
-		_, err = r.pool.Exec(ctx, query, event.AggregatorType, event.AggregatorID, event.EventType, event.Payload,
+		_, err = tx.Exec(ctx, query, event.AggregatorType, event.AggregatorID, event.EventType, event.Payload,
 			event.IdempotencyKey, event.CreatedAt, ctxTraceJSON,
 		)
 	}
@@ -121,7 +119,7 @@ func (r *Repository) IncrementRetry(ctx context.Context, eventID int64) error {
 	defer span.End()
 	span.SetAttributes(tracing.PostgresDB(query)...)
 
-	_, err := r.pool.Exec(ctx, query, time.Now(), eventID)
+	_, err := r.pool.Exec(ctx, query, eventID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "outbox, increment retry fail")

@@ -6,6 +6,7 @@ import (
 	authInterceptor "gRPCbigapp/Shared/Auth/AuthInterceptor"
 	"gRPCbigapp/Shared/Config"
 	logAdapter "gRPCbigapp/Shared/Logger/LoggerAdapter"
+	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	Metrics2 "gRPCbigapp/Shared/Metrics"
 	"gRPCbigapp/Shared/PanicInterceptor"
 	RateLimiter2 "gRPCbigapp/Shared/RateLimiter"
@@ -54,9 +55,10 @@ func main() {
 		Environment:    cfg.Environment,
 		SampleRatio:    cfg.TracingSampleRatio,
 		Enabled:        cfg.TracingEnabled,
+		Logger:         logger,
 	})
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error initializing tracing: %w", err)
+		logger.LogError("tracing init failed", LoggerPorts.Fieled{Key: "error", Value: err.Error()})
 		os.Exit(1)
 	}
 	defer func() {
