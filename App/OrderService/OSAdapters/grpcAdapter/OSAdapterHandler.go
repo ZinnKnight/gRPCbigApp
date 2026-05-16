@@ -51,8 +51,8 @@ func (o *OrderHandler) CreateOrder(ctx context.Context, req *orderpb.CreateOrder
 	orderID, err := o.useCase.CreteOrder(ctx, cmd)
 	if err != nil {
 		o.logger.LogError("grpc, failed to crete order",
-			LoggerPorts.Fieled{Key: "id", Value: user.UserID},
-			LoggerPorts.Fieled{Key: "error", Value: err.Error()})
+			LoggerPorts.Field{Key: "id", Value: user.UserID},
+			LoggerPorts.Field{Key: "error", Value: err.Error()})
 		return nil, DomainErrorMapping(err)
 	}
 

@@ -91,15 +91,15 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 	})
 	if err != nil {
 		osu.logger.LogError("usecase, fail in creating order: %v, ",
-			LoggerPorts.Fieled{Key: "user_id", Value: order.UserID},
-			LoggerPorts.Fieled{Key: "error", Value: err.Error()},
+			LoggerPorts.Field{Key: "user_id", Value: order.UserID},
+			LoggerPorts.Field{Key: "error", Value: err.Error()},
 		)
 		return "", fmt.Errorf("usecase, creating order: %w", err)
 	}
 
 	osu.logger.LogInfo("order creted",
-		LoggerPorts.Fieled{Key: "user_id", Value: order.UserID},
-		LoggerPorts.Fieled{Key: "order_id", Value: order.OrderID},
+		LoggerPorts.Field{Key: "user_id", Value: order.UserID},
+		LoggerPorts.Field{Key: "order_id", Value: order.OrderID},
 	)
 
 	return order.OrderID, nil

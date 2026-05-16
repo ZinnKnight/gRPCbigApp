@@ -19,9 +19,9 @@ func PanicRecoveryInterceptor(logger LoggerPorts.Logger) grpc.UnaryServerInterce
 				stack := string(debug.Stack())
 
 				logger.LogError("Panic was prevented in grpc handler",
-					LoggerPorts.Fieled{Key: "method", Value: info.FullMethod},
-					LoggerPorts.Fieled{Key: "stack", Value: stack},
-					LoggerPorts.Fieled{Key: "panic", Value: r},
+					LoggerPorts.Field{Key: "method", Value: info.FullMethod},
+					LoggerPorts.Field{Key: "stack", Value: stack},
+					LoggerPorts.Field{Key: "panic", Value: r},
 				)
 				err = status.Errorf(codes.Internal, "internal error")
 			}

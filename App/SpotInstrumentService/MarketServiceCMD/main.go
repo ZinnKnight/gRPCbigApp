@@ -58,7 +58,7 @@ func main() {
 		Logger:         logger,
 	})
 	if err != nil {
-		logger.LogError("tracing init failed", LoggerPorts.Fieled{Key: "error", Value: err.Error()})
+		logger.LogError("tracing init failed", LoggerPorts.Field{Key: "error", Value: err.Error()})
 		os.Exit(1)
 	}
 	defer func() {

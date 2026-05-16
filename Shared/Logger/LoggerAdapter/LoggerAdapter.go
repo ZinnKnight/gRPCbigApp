@@ -18,7 +18,7 @@ func NewZapLogger() (*ZapLogger, error) {
 	return &ZapLogger{log: l}, nil
 }
 
-func toZapLogger(fields []LoggerPorts.Fieled) []zap.Field {
+func toZapLogger(fields []LoggerPorts.Field) []zap.Field {
 	res := make([]zap.Field, 0, len(fields))
 	for _, field := range fields {
 		res = append(res, zap.Any(field.Key, field.Value))
@@ -26,11 +26,11 @@ func toZapLogger(fields []LoggerPorts.Fieled) []zap.Field {
 	return res
 }
 
-func (l *ZapLogger) LogError(msg string, fields ...LoggerPorts.Fieled) {
+func (l *ZapLogger) LogError(msg string, fields ...LoggerPorts.Field) {
 	l.log.Error(msg, toZapLogger(fields)...)
 }
 
-func (l *ZapLogger) LogInfo(msg string, fields ...LoggerPorts.Fieled) {
+func (l *ZapLogger) LogInfo(msg string, fields ...LoggerPorts.Field) {
 	l.log.Info(msg, toZapLogger(fields)...)
 }
 

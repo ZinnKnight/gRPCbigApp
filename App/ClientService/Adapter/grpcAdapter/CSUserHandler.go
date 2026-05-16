@@ -51,7 +51,7 @@ func (uh *UserHandler) UserRegistration(ctx context.Context, req *clientpb.Regis
 	user, err := uh.useCase.RegisterUser(ctx, rui)
 	if err != nil {
 		uh.logger.LogError("grpc, failed to register user",
-			LoggerPorts.Fieled{Key: "error", Value: err.Error()})
+			LoggerPorts.Field{Key: "error", Value: err.Error()})
 		return nil, UserErrorsMapper(err)
 	}
 

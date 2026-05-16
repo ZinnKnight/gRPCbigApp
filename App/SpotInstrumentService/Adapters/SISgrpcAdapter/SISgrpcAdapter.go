@@ -38,8 +38,8 @@ func (h *SISgrpcHandler) ViewMarketByID(ctx context.Context, req *marketpb.ViewM
 	market, err := h.useCase.GetMarketByID(ctx, req.MarketId)
 	if err != nil {
 		h.logger.LogError("sisgrpcAdapter, failed to view a market by id",
-			LoggerPorts.Fieled{Key: "id", Value: req.MarketId},
-			LoggerPorts.Fieled{Key: "error", Value: err.Error()})
+			LoggerPorts.Field{Key: "id", Value: req.MarketId},
+			LoggerPorts.Field{Key: "error", Value: err.Error()})
 		return nil, marketErrorsMaper(err)
 	}
 	return &marketpb.ViewMarketsByIDResponse{
@@ -61,7 +61,7 @@ func (h *SISgrpcHandler) ViewAllMarkets(ctx context.Context, req *marketpb.ViewM
 	markets, nextCurs, err := h.useCase.GetAllMarkets(ctx, size, curs)
 	if err != nil {
 		h.logger.LogError("sisgrpcAdapter, failed to view all markets",
-			LoggerPorts.Fieled{Key: "error", Value: err.Error()},
+			LoggerPorts.Field{Key: "error", Value: err.Error()},
 		)
 		return nil, marketErrorsMaper(err)
 	}

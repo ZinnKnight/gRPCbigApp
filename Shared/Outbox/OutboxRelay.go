@@ -44,7 +44,7 @@ func (r *Relay) batching(ctx context.Context) {
 		batchSpan.RecordError(err)
 		batchSpan.SetStatus(codes.Error, "outbox, fetch increment retry fail")
 		r.logger.LogError("Outbox FetchUnpublished failed",
-			LoggerPorts.Fieled{Key: "error", Value: err.Error()},
+			LoggerPorts.Field{Key: "error", Value: err.Error()},
 		)
 		return
 	}
@@ -66,9 +66,9 @@ func (r *Relay) batching(ctx context.Context) {
 			publishSpan.RecordError(err)
 			publishSpan.SetStatus(codes.Error, "publish failed")
 			r.logger.LogError("Outbox Publish failed",
-				LoggerPorts.Fieled{Key: "even_id", Value: event.ID},
-				LoggerPorts.Fieled{Key: "event_type", Value: event.EventType},
-				LoggerPorts.Fieled{Key: "error", Value: err.Error()},
+				LoggerPorts.Field{Key: "even_id", Value: event.ID},
+				LoggerPorts.Field{Key: "event_type", Value: event.EventType},
+				LoggerPorts.Field{Key: "error", Value: err.Error()},
 			)
 			_ = r.repo.IncrementRetry(publishCtx, event.ID)
 			publishSpan.End()
@@ -77,8 +77,8 @@ func (r *Relay) batching(ctx context.Context) {
 
 		if err := r.repo.MarkPublished(publishCtx, event.ID); err != nil {
 			r.logger.LogError("Outbox MarkPublished failed",
-				LoggerPorts.Fieled{Key: "even_id", Value: event.ID},
-				LoggerPorts.Fieled{Key: "error", Value: err.Error()})
+				LoggerPorts.Field{Key: "even_id", Value: event.ID},
+				LoggerPorts.Field{Key: "error", Value: err.Error()})
 		}
 
 		publishSpan.End()
@@ -87,8 +87,8 @@ func (r *Relay) batching(ctx context.Context) {
 
 func (r *Relay) Start(ctx context.Context) {
 	r.logger.LogInfo("Starting outbox relay",
-		LoggerPorts.Fieled{Key: "interval", Value: r.interval.String()},
-		LoggerPorts.Fieled{Key: "batch_size", Value: r.batchSize},
+		LoggerPorts.Field{Key: "interval", Value: r.interval.String()},
+		LoggerPorts.Field{Key: "batch_size", Value: r.batchSize},
 	)
 
 	ticker := time.NewTicker(r.interval)

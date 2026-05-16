@@ -83,7 +83,7 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 	}
 	if logger != nil {
 		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-			logger.LogError("otel sdk runtime error", LoggerPorts.Fieled{Key: "error", Value: err.Error()})
+			logger.LogError("otel sdk runtime error", LoggerPorts.Field{Key: "error", Value: err.Error()})
 		}))
 	}
 
@@ -152,21 +152,21 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 	}, nil
 }
 
-func field(k string, v interface{}) LoggerPorts.Fieled {
-	return LoggerPorts.Fieled{Key: k, Value: v}
+func field(k string, v interface{}) LoggerPorts.Field {
+	return LoggerPorts.Field{Key: k, Value: v}
 }
 
-func logInfo(l LoggerPorts.Logger, msg string, fields ...LoggerPorts.Fieled) {
+func logInfo(l LoggerPorts.Logger, msg string, fields ...LoggerPorts.Field) {
 	if l == nil {
 		return
 	}
 	l.LogInfo(msg, fields...)
 }
 
-func logErr(l LoggerPorts.Logger, msg string, err error, extra ...LoggerPorts.Fieled) {
+func logErr(l LoggerPorts.Logger, msg string, err error, extra ...LoggerPorts.Field) {
 	if l == nil {
 		return
 	}
-	all := append([]LoggerPorts.Fieled{{Key: "error", Value: err.Error()}}, extra...)
+	all := append([]LoggerPorts.Field{{Key: "error", Value: err.Error()}}, extra...)
 	l.LogError(msg, all...)
 }

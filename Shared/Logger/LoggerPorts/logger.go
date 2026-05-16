@@ -1,11 +1,11 @@
 package LoggerPorts
 
 type Logger interface {
-	LogError(msg string, fields ...Fieled)
-	LogInfo(msg string, fields ...Fieled)
+	LogError(msg string, fields ...Field)
+	LogInfo(msg string, fields ...Field)
 }
 
-type Fieled struct {
+type Field struct {
 	Key   string
 	Value interface{}
 }

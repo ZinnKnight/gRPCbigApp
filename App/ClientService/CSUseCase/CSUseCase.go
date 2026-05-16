@@ -91,8 +91,8 @@ func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUse
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "usecase.SaveUser failed")
 		us.logger.LogError("Usecase, failed to save user",
-			LoggerPorts.Fieled{Key: "id", Value: user.UserID},
-			LoggerPorts.Fieled{Key: "error", Value: err.Error()},
+			LoggerPorts.Field{Key: "id", Value: user.UserID},
+			LoggerPorts.Field{Key: "error", Value: err.Error()},
 		)
 		return nil, fmt.Errorf("usecase, user registration: %w", err)
 	}
