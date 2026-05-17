@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package auth;
 
-option go_package = "/client";
+import "buf/validate/validate.proto";
 
 enum Roles {
   UNAUTHORISED_USER = 0;

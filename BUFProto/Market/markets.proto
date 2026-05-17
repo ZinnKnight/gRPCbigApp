@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package markets;
 
-option go_package = "/market";
-
 service SpotInstrumentService {
   rpc ViewMarketsByID(ViewMarketsByIDRequest) returns (ViewMarketsByIDResponse);
   rpc ViewMarketsAll(ViewMarketsAllRequest) returns (ViewMarketsAllResponse);
