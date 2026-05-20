@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package auth;
 
-import "validate/validate.proto";
+import "validate.proto";
 
 enum Roles {
   UNAUTHORISED_USER = 0;
@@ -12,9 +12,16 @@ enum Roles {
 }
 
 message User {
-  string UserID = 1;
-
+  string UserID = 1 [(validate.rules).string.uuid = true];
+  string UserName = 2 [(validate.rules).bytes = {
+    pattern:   "^[A-Za-z]+( [A-Za-z]+)*$",
+    min_len: 4,
+    max_len: 16,
+  }];
+  string UserPassword = 3 [(validate.rules).string = {}];
+  Roles UserRole = 4;
 }
+
 
 service AuthService {
   rpc UserRegistration(RegisterRequest) returns (AuthResponse);
@@ -22,6 +29,8 @@ service AuthService {
   rpc PlanChange(PlanChangeRequest) returns (PlanChangeResponse);
   rpc AdminCheck(IsAdminRequest) returns (IsAdminResponse);
 }
+
+// посмотреть саму логику валидации и ссылки на структуру, тип как мы вообще это обрабатываем
 
 message RegisterRequest {
   string user_name = 1;
