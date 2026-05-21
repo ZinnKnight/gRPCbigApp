@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package auth;
 
-import "validate.proto";
+import "validate/validate.proto";
 
 enum Roles {
   UNAUTHORISED_USER = 0;
@@ -12,14 +12,23 @@ enum Roles {
 }
 
 message User {
-  string UserID = 1 [(validate.rules).string.uuid = true];
-  string UserName = 2 [(validate.rules).bytes = {
-    pattern:   "^[A-Za-z]+( [A-Za-z]+)*$",
+  
+  string user_id = 1 [(validate.rules).string.uuid = true];
+
+  string user_name = 2 [(validate.rules).string = {
+    pattern: "^[A-Za-z]+( [A-Za-z]+)*$",
     min_len: 4,
-    max_len: 16,
+    max_len: 16
   }];
-  string UserPassword = 3 [(validate.rules).string = {}];
-  Roles UserRole = 4;
+
+  string user_password = 3 [(validate.rules).string = {
+
+    pattern: "^[\\x21-\\x7E]+$",
+    min_len: 8,
+    max_len: 72
+  }];
+
+  Roles UserRole = 4 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
 }
 
 
@@ -30,38 +39,90 @@ service AuthService {
   rpc AdminCheck(IsAdminRequest) returns (IsAdminResponse);
 }
 
-// посмотреть саму логику валидации и ссылки на структуру, тип как мы вообще это обрабатываем
 
 message RegisterRequest {
-  string user_name = 1;
-  string user_password = 2;
-  Roles user_role = 3;
+
+  string user_name = 1 [(validate.rules).string = {
+    pattern: "^[A-Za-z]+( [A-Za-z]+)*$",
+    min_len: 4,
+    max_len: 16
+  }];
+
+  string user_password = 2 [(validate.rules).string = {
+    pattern: "^[\\x21-\\x7E]+$",
+    min_len: 8,
+    max_len: 72
+  }];
+
+  Roles user_role = 3 [(validate.rules).enum = {defined_only: true, not_in:[0]}];
+
 }
 
 message LoginRequest {
-  string user_id = 1;
+
+  string user_name = 1 [(validate.rules).string = {
+    pattern: "^[A-Za-z]+( [A-Za-z]+)*$",
+    min_len: 4,
+    max_len: 16
+  }];
+
+  string user_password = 2 [(validate.rules).string = {
+    pattern: "^[\\x21-\\x7E]+$",
+    min_len: 8,
+    max_len: 72
+  }];
+
 }
 
 message AuthResponse {
+
   string token = 1;
+
+  int64 token_ttl = 2;
+
 }
 
 
 message PlanChangeRequest {
-  // unspecified под user_role
-  string user_name = 1;
-  Roles user_role = 2;
+
+  string user_name = 1 [(validate.rules).string = {
+    pattern: "^[A-Za-z]+( [A-Za-z]+)*$",
+    min_len: 4,
+    max_len: 16
+  }];
+
+  Roles user_role = 2 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+
 }
 
 message PlanChangeResponse {
-  string token = 1;
-  string message = 2;
+
+  string user_name = 1 [(validate.rules).string = {
+    pattern: "^[A-Za-z]+( [A-Za-z]+)*$",
+    min_len: 4,
+    max_len: 16
+  }];
+
+  Roles user_role = 2 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
 }
 
 message IsAdminRequest {
-  string user_id = 1;
+
+  string user_name = 1 [(validate.rules).string = {
+    pattern: "^[A-Za-z]+( [A-Za-z]+)*$",
+    min_len: 4,
+    max_len: 16
+  }];
+
+  string user_password = 2 [(validate.rules).string = {
+    pattern: "^[\\x21-\\x7E]+$",
+    min_len: 8,
+    max_len: 72
+  }];
 }
 
 message IsAdminResponse {
-  bool user_is_admin = 1;
+
+  bool is_admin = 1;
+
 }

@@ -2,6 +2,10 @@ syntax = "proto3";
 
 package order;
 
+import "validate/validate.proto";
+import "validate/money.proto";
+import "validate/decimal.proto";
+
 service OrderService {
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
   rpc GetOrderStatusByID(OrderStatusByIDRequest) returns (OrderStatusByIDResponse);
@@ -9,31 +13,60 @@ service OrderService {
   rpc GetOrderStatusAll(OrderStatusAllRequest) returns (OrderStatusAllResponse);
 }
 
-message OrderStatusStruct {
-  string order_id = 1;
-  string status = 2;
+enum OrderStatus {
+  UNREGISTERED_STATUS = 0;
+  ORDER_REJECTED = 1;
+  ORDER_CREATED = 2;
+  ORDER_RESERVED = 3;
+  ORDER_IN_PROCESS_OF_DELIVERY = 4;
+  ORDER_HAS_BEEN_DELIVERED = 5;
+}
+
+message Order {
+
+  string user_id = 1 [(validate.rules).string.uuid = true];
+
+  string order_id = 2 [(validate.rules).string.uuid = true];
+
+  string market_id = 3 [(validate.rules).string.uuid = true];
+
+  google.type.Money price = 4;
+
+  google.type.Decimal amount = 5;
+
+  string order_status = 6 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+
+  int64 created_at = 7;
+
 }
 
 
 message CreateOrderRequest {
-  string market_id = 1;
-  string order_type = 2;
-  string price = 3;
-  string quantity = 4;
+
+  string market_id = 1 [(validate.rules).string.uuid = true];
+
+  google.type.Decimal amount = 2;
+
+  google.type.Money price = 3;
+
+  string order_status = 4 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+
 }
 
 message CreateOrderResponse {
-  string order_id = 1;
-  string order_status = 2;
+
+  Order crete_order_response = 1;
+
 }
 
 message OrderStatusByIDRequest {
-  string order_id = 1;
+  string market_id = 1 [(validate.rules).string.uuid = true];
 }
 
 message OrderStatusByIDResponse {
-  string order_id = 1;
-  string order_status = 2;
+
+  Order order_status_response = 1;
+
 }
 
 message OrderStatusAllRequest {
@@ -42,10 +75,10 @@ message OrderStatusAllRequest {
 }
 
 message OrderStatusAllResponse {
-  repeated OrderStatusStruct orders = 1;
+  repeated Order all_orders_statuses_response = 1;
   string next_page_token = 2;
 }
 
 message StreamOrderRequest {
-  string order_id = 1;
+  string order_id = 1 [(validate.rules).string.uuid = true];
 }
