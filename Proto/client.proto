@@ -12,7 +12,7 @@ enum Roles {
 }
 
 message User {
-  
+
   string user_id = 1 [(validate.rules).string.uuid = true];
 
   string user_name = 2 [(validate.rules).string = {
@@ -28,7 +28,7 @@ message User {
     max_len: 72
   }];
 
-  Roles UserRole = 4 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  Roles user_role = 4 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
 }
 
 

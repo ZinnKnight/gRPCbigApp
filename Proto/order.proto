@@ -30,11 +30,11 @@ message Order {
 
   string market_id = 3 [(validate.rules).string.uuid = true];
 
-  google.type.Money price = 4;
+  google.type.Money price = 4 [(validate.rules).message.required = true];
 
   google.type.Decimal amount = 5;
 
-  string order_status = 6 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  OrderStatus order_status = 6 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
 
   int64 created_at = 7;
 
@@ -47,15 +47,15 @@ message CreateOrderRequest {
 
   google.type.Decimal amount = 2;
 
-  google.type.Money price = 3;
+  google.type.Money price = 3 [(validate.rules).message.required = true];
 
-  string order_status = 4 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  OrderStatus order_status = 4 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
 
 }
 
 message CreateOrderResponse {
 
-  Order crete_order_response = 1;
+  Order create_order_response = 1;
 
 }
 
