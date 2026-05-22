@@ -22,10 +22,10 @@ type OrderStatus string
 
 // Add StatusRejected for more clarity with StatusCanceled
 const (
-	StatusCreated   OrderStatus = "Order created"
-	StatusCancelled OrderStatus = "Order cancelled"
-	StatusPrepared  OrderStatus = "Order prepared"
-	StutusRejected  OrderStatus = "Order rejected"
+	StatusCreated   OrderStatus = "order created"
+	StatusCancelled OrderStatus = "order cancelled"
+	StatusPrepared  OrderStatus = "order prepared"
+	StutusRejected  OrderStatus = "order rejected"
 )
 
 var (

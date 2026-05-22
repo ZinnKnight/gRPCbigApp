@@ -4,6 +4,8 @@ package auth;
 
 import "validate/validate.proto";
 
+option go_package = "gRPCbigapp/Proto/protoPB;client";
+
 enum Roles {
   UNAUTHORISED_USER = 0;
   FREE_PLAN_USER = 1;

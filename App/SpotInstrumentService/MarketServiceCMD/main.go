@@ -93,7 +93,7 @@ func main() {
 
 	rdb, err := redisClient.NewRedisClient(ctx, cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
 	if err != nil {
-		fmt.Println("Error initializing redis client: %w", err)
+		fmt.Println("Error initializing redis protoPB: %w", err)
 		os.Exit(1)
 	}
 	defer rdb.Close()

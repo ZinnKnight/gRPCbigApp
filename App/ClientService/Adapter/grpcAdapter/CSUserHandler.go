@@ -5,7 +5,7 @@ import (
 	"errors"
 	"gRPCbigapp/App/ClientService/CSDomain"
 	"gRPCbigapp/App/ClientService/CSPorts"
-	clientpb "gRPCbigapp/Proto/client"
+	clientpb "gRPCbigapp/Proto/protoPB"
 	"gRPCbigapp/Shared/Auth/AuthAdapter"
 	"gRPCbigapp/Shared/Auth/AuthCTX"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"

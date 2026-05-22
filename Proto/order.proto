@@ -6,6 +6,8 @@ import "validate/validate.proto";
 import "validate/money.proto";
 import "validate/decimal.proto";
 
+option go_package = "gRPCbigapp/Proto/protoPB;order";
+
 service OrderService {
   rpc CreateOrder(CreateOrderRequest) returns (CreateOrderResponse);
   rpc GetOrderStatusByID(OrderStatusByIDRequest) returns (OrderStatusByIDResponse);

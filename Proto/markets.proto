@@ -4,6 +4,8 @@ package markets;
 
 import "validate/validate.proto";
 
+option go_package = "gRPCbigapp/Proto/protoPB;market";
+
 service SpotInstrumentService {
   rpc ViewMarketsByID(ViewMarketRequest) returns (ViewMarketResponse);
   rpc ViewMarketsAll(ViewMarketsAllRequest) returns (ViewMarketsAllResponse);
