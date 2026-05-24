@@ -10,7 +10,7 @@ import (
 	orderGRPC "gRPCbigapp/App/OrderService/OSAdapters/grpcAdapter"
 	orderUC "gRPCbigapp/App/OrderService/OSUseCase"
 	orderPB "gRPCbigapp/Proto/order"
-	clientPB "gRPCbigapp/Proto/protoPB"
+	"gRPCbigapp/Proto/protoPB/clientPB"
 	authAdapter "gRPCbigapp/Shared/Auth/AuthAdapter"
 	authInterceptor "gRPCbigapp/Shared/Auth/AuthInterceptor"
 	"gRPCbigapp/Shared/Config"

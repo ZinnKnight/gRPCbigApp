@@ -4,15 +4,16 @@
 // 	protoc        v6.33.4
 // source: client.proto
 
-package client
+package clientPB
 
 import (
-	_ "github.com/envoyproxy/protoc-gen-validate/validate"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
+
+	_ "github.com/envoyproxy/protoc-gen-validate/validate"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -78,8 +79,8 @@ type User struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	UserName      string                 `protobuf:"bytes,2,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
-	UserPassword  string                 `protobuf:"bytes,3,opt,name=user_password,json=userPassword,proto3" json:"user_password,omitempty"`
-	UserRole      Roles                  `protobuf:"varint,4,opt,name=user_role,json=userRole,proto3,enum=auth.Roles" json:"user_role,omitempty"`
+	UserPassword  string `protobuf:"bytes,3,opt,name=user_password,json=userPassword,proto3" json:"user_password,omitempty"`
+	UserRole      Roles  `protobuf:"varint,4,opt,name=user_role,json=userRole,proto3,enum=auth.Roles" json:"user_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -145,8 +146,8 @@ func (x *User) GetUserRole() Roles {
 type RegisterRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserName      string                 `protobuf:"bytes,1,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
-	UserPassword  string                 `protobuf:"bytes,2,opt,name=user_password,json=userPassword,proto3" json:"user_password,omitempty"`
-	UserRole      Roles                  `protobuf:"varint,3,opt,name=user_role,json=userRole,proto3,enum=auth.Roles" json:"user_role,omitempty"`
+	UserPassword  string `protobuf:"bytes,2,opt,name=user_password,json=userPassword,proto3" json:"user_password,omitempty"`
+	UserRole      Roles  `protobuf:"varint,3,opt,name=user_role,json=userRole,proto3,enum=auth.Roles" json:"user_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -308,8 +309,8 @@ func (x *AuthResponse) GetTokenTtl() int64 {
 
 type PlanChangeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserName      string                 `protobuf:"bytes,1,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
-	UserRole      Roles                  `protobuf:"varint,2,opt,name=user_role,json=userRole,proto3,enum=auth.Roles" json:"user_role,omitempty"`
+	UserName      string `protobuf:"bytes,1,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	UserRole      Roles  `protobuf:"varint,2,opt,name=user_role,json=userRole,proto3,enum=auth.Roles" json:"user_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -360,8 +361,8 @@ func (x *PlanChangeRequest) GetUserRole() Roles {
 
 type PlanChangeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserName      string                 `protobuf:"bytes,1,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
-	UserRole      Roles                  `protobuf:"varint,2,opt,name=user_role,json=userRole,proto3,enum=auth.Roles" json:"user_role,omitempty"`
+	UserName      string `protobuf:"bytes,1,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
+	UserRole      Roles  `protobuf:"varint,2,opt,name=user_role,json=userRole,proto3,enum=auth.Roles" json:"user_role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

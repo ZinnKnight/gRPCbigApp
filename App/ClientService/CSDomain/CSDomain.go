@@ -18,7 +18,7 @@ type User struct {
 type UserPlan string
 
 type IsAdmin struct {
-	UserID string
+	UserName string
 }
 
 func (usr *User) ValidateUser() error {
@@ -31,9 +31,20 @@ func (usr *User) ValidateUser() error {
 	return nil
 }
 
+// временно сделал так, потом доделаю криптографию и нормальное сохранение
+
+func (usr *User) ValidatePassword(password string) bool {
+	return usr.UserPassword == password
+}
+
+func (usr *User) ValidateAdmin() bool {
+	return usr.UserRole == AdminRole
+}
+
 var (
-	ErrUserNotFound      = errors.New("user not found")
-	ErrUserAlreadyExists = errors.New("user already exists")
-	ErrEmptyName         = errors.New("user name is empty")
-	ErrEmptyPassword     = errors.New("user password is empty")
+	ErrUserNotFound         = errors.New("user not found")
+	ErrUserAlreadyExists    = errors.New("user already exists")
+	ErrEmptyName            = errors.New("user name is empty")
+	ErrEmptyPassword        = errors.New("user password is empty")
+	ErrIncorrectCredentials = errors.New("incorrect credentials")
 )

@@ -50,8 +50,7 @@ message CreateOrderRequest {
   google.type.Decimal amount = 2;
 
   google.type.Money price = 3 [(validate.rules).message.required = true];
-
-  OrderStatus order_status = 4 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
+  
 
 }
 

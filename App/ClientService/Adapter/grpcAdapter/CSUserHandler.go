@@ -5,7 +5,7 @@ import (
 	"errors"
 	"gRPCbigapp/App/ClientService/CSDomain"
 	"gRPCbigapp/App/ClientService/CSPorts"
-	clientpb "gRPCbigapp/Proto/protoPB"
+	"gRPCbigapp/Proto/protoPB/clientPB"
 	"gRPCbigapp/Shared/Auth/AuthAdapter"
 	"gRPCbigapp/Shared/Auth/AuthCTX"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
@@ -15,7 +15,7 @@ import (
 )
 
 type UserHandler struct {
-	clientpb.UnimplementedAuthServiceServer
+	clientPB.UnimplementedAuthServiceServer
 	useCase CSPorts.UserInboundPort
 	jwt     *AuthAdapter.JWTService
 	logger  LoggerPorts.Logger
@@ -29,9 +29,17 @@ func NewUserhandler(uc CSPorts.UserInboundPort, log LoggerPorts.Logger, j *AuthA
 	}
 }
 
+// временный мок для смены роли самим юзером. Позже добавлю рестрикшены, сейчас мок на автоматический запрос-выдачу
+
+func (uh *UserHandler) planUserChangeActionMock(_ context.Context, _ *AuthCTX.UserAuth) bool {
+	return true
+}
+
 func UserErrorsMapper(err error) error {
 	switch {
 	case errors.Is(err, CSDomain.ErrEmptyName), errors.Is(err, CSDomain.ErrEmptyPassword):
+		return status.Errorf(codes.InvalidArgument, err.Error())
+	case errors.Is(err, CSDomain.ErrIncorrectCredentials):
 		return status.Errorf(codes.InvalidArgument, err.Error())
 	case errors.Is(err, CSDomain.ErrUserAlreadyExists):
 		return status.Errorf(codes.AlreadyExists, err.Error())
@@ -42,7 +50,20 @@ func UserErrorsMapper(err error) error {
 	}
 }
 
-func (uh *UserHandler) UserRegistration(ctx context.Context, req *clientpb.RegisterRequest) (*clientpb.AuthResponse, error) {
+// маппинг ролей + чек на присваивание
+
+func planToUser(plan CSDomain.UserPlan) clientPB.Roles {
+	if val, ok := clientPB.Roles_value[string(plan)]; ok {
+		return clientPB.Roles(val)
+	}
+	return clientPB.Roles_UNAUTHORISED_USER
+}
+
+func roleToUser(role clientPB.Roles) CSDomain.UserPlan {
+	return CSDomain.UserPlan(role.String())
+}
+
+func (uh *UserHandler) UserRegistration(ctx context.Context, req *clientPB.RegisterRequest) (*clientPB.AuthResponse, error) {
 	rui := CSPorts.RegisterUserInput{
 		UserName:     req.GetUserName(),
 		UserPassword: req.GetUserPassword(),
@@ -59,11 +80,11 @@ func (uh *UserHandler) UserRegistration(ctx context.Context, req *clientpb.Regis
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to generate token")
 	}
-	return &clientpb.AuthResponse{Token: token}, nil
+	return &clientPB.AuthResponse{Token: token}, nil
 }
 
-func (uh *UserHandler) UserLogin(ctx context.Context, req *clientpb.LoginRequest) (*clientpb.AuthResponse, error) {
-	user, err := uh.useCase.LoginUser(ctx, req.UserId)
+func (uh *UserHandler) UserLogin(ctx context.Context, req *clientPB.LoginRequest) (*clientPB.AuthResponse, error) {
+	user, err := uh.useCase.LoginUser(ctx, req.UserName)
 	if err != nil {
 		return nil, UserErrorsMapper(err)
 	}
@@ -72,31 +93,37 @@ func (uh *UserHandler) UserLogin(ctx context.Context, req *clientpb.LoginRequest
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to generate token")
 	}
-	return &clientpb.AuthResponse{Token: token}, nil
+	return &clientPB.AuthResponse{Token: token}, nil
 }
 
-func (uh *UserHandler) IsAdmin(ctx context.Context, req *clientpb.IsAdminRequest) (*clientpb.IsAdminResponse, error) {
-	isAdmin, err := uh.useCase.IsAdmin(ctx, req.UserId)
+func (uh *UserHandler) IsAdmin(ctx context.Context, req *clientPB.IsAdminRequest) (*clientPB.IsAdminResponse, error) {
+	isAdmin, err := uh.useCase.IsAdmin(ctx, req.UserName)
 	if err != nil {
 		return nil, UserErrorsMapper(err)
 	}
-	return &clientpb.IsAdminResponse{UserIsAdmin: isAdmin}, nil
+	return &clientPB.IsAdminResponse{IsAdmin: isAdmin}, nil
 }
 
-func (uh *UserHandler) ChangeUserPlan(ctx context.Context, req *clientpb.PlanChangeRequest) (*clientpb.PlanChangeResponse, error) {
+func (uh *UserHandler) ChangeUserPlan(ctx context.Context, req *clientPB.PlanChangeRequest) (*clientPB.PlanChangeResponse, error) {
 	plan, ok := AuthCTX.GetUser(ctx)
 	if !ok {
 		return nil, status.Errorf(codes.Unauthenticated, "authentication required")
 	}
 
-	err := uh.useCase.ChangeUserPlan(ctx, plan.UserID, CSDomain.Pro)
+	if !uh.planUserChangeActionMock(ctx, plan) {
+		return nil, status.Errorf(codes.PermissionDenied, "permission denied")
+	}
+
+	newPlan := roleToUser(req.GetUserRole())
+
+	user, err := uh.useCase.ChangeUserPlan(ctx, plan.UserName, newPlan)
 	if err != nil {
 		return nil, UserErrorsMapper(err)
 	}
 
-	token, err := uh.jwt.GenerateToken(plan.UserID, plan.UserName, string(plan.UserPlan))
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to generate token")
-	}
-	return &clientpb.PlanChangeResponse{Token: token}, nil
+	return &clientPB.PlanChangeResponse{
+		UserName: user.UserName,
+		UserRole: planToUser(user.UserRole),
+	}, nil
+
 }
