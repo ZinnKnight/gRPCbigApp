@@ -100,26 +100,3 @@ func (rc *UserRepo) UpdateUserPlan(ctx context.Context, userID string, userPlan 
 	}
 	return nil
 }
-
-func (rc *UserRepo) IsAdmin(ctx context.Context, userID string) (bool, error) {
-	const query = `SELECT user_role FROM users_data WHERE user_id = $1`
-
-	ctx, span := trace.Start(ctx, "db.IsAdmin", tracing.KindClient)
-	defer span.End()
-
-	span.SetAttributes(tracing.PostgresDB(query)...)
-
-	row := rc.connection(ctx).QueryRow(ctx, query, userID)
-
-	var role string
-	if err := row.Scan(&role); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			span.AddEvent("user_not_found")
-			return false, CSDomain.ErrUserNotFound
-		}
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "db.IsAdmin failed")
-		return false, fmt.Errorf("postgres, error isAdmin: %w", err)
-	}
-	return CSDomain.UserPlan(role) == CSDomain.AdminRole, nil
-}

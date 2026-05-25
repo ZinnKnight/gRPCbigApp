@@ -38,7 +38,6 @@ service AuthService {
   rpc UserRegistration(RegisterRequest) returns (AuthResponse);
   rpc UserLogin(LoginRequest) returns (AuthResponse);
   rpc PlanChange(PlanChangeRequest) returns (PlanChangeResponse);
-  rpc AdminCheck(IsAdminRequest) returns (IsAdminResponse);
 }
 
 
@@ -108,23 +107,3 @@ message PlanChangeResponse {
   Roles user_role = 2 [(validate.rules).enum = {defined_only: true, not_in: [0]}];
 }
 
-message IsAdminRequest {
-
-  string user_name = 1 [(validate.rules).string = {
-    pattern: "^[A-Za-z]+( [A-Za-z]+)*$",
-    min_len: 4,
-    max_len: 16
-  }];
-
-  string user_password = 2 [(validate.rules).string = {
-    pattern: "^[\\x21-\\x7E]+$",
-    min_len: 8,
-    max_len: 72
-  }];
-}
-
-message IsAdminResponse {
-
-  bool is_admin = 1;
-
-}

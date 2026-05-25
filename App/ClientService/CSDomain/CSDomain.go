@@ -37,10 +37,6 @@ func (usr *User) ValidatePassword(password string) bool {
 	return usr.UserPassword == password
 }
 
-func (usr *User) ValidateAdmin() bool {
-	return usr.UserRole == AdminRole
-}
-
 var (
 	ErrUserNotFound         = errors.New("user not found")
 	ErrUserAlreadyExists    = errors.New("user already exists")

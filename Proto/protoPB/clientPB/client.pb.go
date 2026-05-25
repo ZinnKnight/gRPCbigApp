@@ -411,102 +411,6 @@ func (x *PlanChangeResponse) GetUserRole() Roles {
 	return Roles_UNAUTHORISED_USER
 }
 
-type IsAdminRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	UserName      string                 `protobuf:"bytes,1,opt,name=user_name,json=userName,proto3" json:"user_name,omitempty"`
-	UserPassword  string                 `protobuf:"bytes,2,opt,name=user_password,json=userPassword,proto3" json:"user_password,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *IsAdminRequest) Reset() {
-	*x = IsAdminRequest{}
-	mi := &file_client_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *IsAdminRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IsAdminRequest) ProtoMessage() {}
-
-func (x *IsAdminRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_client_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IsAdminRequest.ProtoReflect.Descriptor instead.
-func (*IsAdminRequest) Descriptor() ([]byte, []int) {
-	return file_client_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *IsAdminRequest) GetUserName() string {
-	if x != nil {
-		return x.UserName
-	}
-	return ""
-}
-
-func (x *IsAdminRequest) GetUserPassword() string {
-	if x != nil {
-		return x.UserPassword
-	}
-	return ""
-}
-
-type IsAdminResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsAdmin       bool                   `protobuf:"varint,1,opt,name=is_admin,json=isAdmin,proto3" json:"is_admin,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *IsAdminResponse) Reset() {
-	*x = IsAdminResponse{}
-	mi := &file_client_proto_msgTypes[7]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *IsAdminResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*IsAdminResponse) ProtoMessage() {}
-
-func (x *IsAdminResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_client_proto_msgTypes[7]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use IsAdminResponse.ProtoReflect.Descriptor instead.
-func (*IsAdminResponse) Descriptor() ([]byte, []int) {
-	return file_client_proto_rawDescGZIP(), []int{7}
-}
-
-func (x *IsAdminResponse) GetIsAdmin() bool {
-	if x != nil {
-		return x.IsAdmin
-	}
-	return false
-}
-
 var File_client_proto protoreflect.FileDescriptor
 
 const file_client_proto_rawDesc = "" +
@@ -536,24 +440,17 @@ const file_client_proto_rawDesc = "" +
 	"\x12PlanChangeResponse\x12@\n" +
 	"\tuser_name\x18\x01 \x01(\tB#\xfaB r\x1e\x10\x04\x18\x102\x18^[A-Za-z]+( [A-Za-z]+)*$R\buserName\x124\n" +
 	"\tuser_role\x18\x02 \x01(\x0e2\v.auth.RolesB\n" +
-	"\xfaB\a\x82\x01\x04\x10\x01 \x00R\buserRole\"\x92\x01\n" +
-	"\x0eIsAdminRequest\x12@\n" +
-	"\tuser_name\x18\x01 \x01(\tB#\xfaB r\x1e\x10\x04\x18\x102\x18^[A-Za-z]+( [A-Za-z]+)*$R\buserName\x12>\n" +
-	"\ruser_password\x18\x02 \x01(\tB\x19\xfaB\x16r\x14\x10\b\x18H2\x0e^[\\x21-\\x7E]+$R\fuserPassword\",\n" +
-	"\x0fIsAdminResponse\x12\x19\n" +
-	"\bis_admin\x18\x01 \x01(\bR\aisAdmin*P\n" +
+	"\xfaB\a\x82\x01\x04\x10\x01 \x00R\buserRole*P\n" +
 	"\x05Roles\x12\x15\n" +
 	"\x11UNAUTHORISED_USER\x10\x00\x12\x12\n" +
 	"\x0eFREE_PLAN_USER\x10\x01\x12\x11\n" +
 	"\rPRO_PLAN_USER\x10\x02\x12\t\n" +
-	"\x05ADMIN\x10\x032\xfd\x01\n" +
+	"\x05ADMIN\x10\x032\xc2\x01\n" +
 	"\vAuthService\x12=\n" +
 	"\x10UserRegistration\x12\x15.auth.RegisterRequest\x1a\x12.auth.AuthResponse\x123\n" +
 	"\tUserLogin\x12\x12.auth.LoginRequest\x1a\x12.auth.AuthResponse\x12?\n" +
 	"\n" +
-	"PlanChange\x12\x17.auth.PlanChangeRequest\x1a\x18.auth.PlanChangeResponse\x129\n" +
-	"\n" +
-	"AdminCheck\x12\x14.auth.IsAdminRequest\x1a\x15.auth.IsAdminResponseB!Z\x1fgRPCbigapp/Proto/protoPB;clientb\x06proto3"
+	"PlanChange\x12\x17.auth.PlanChangeRequest\x1a\x18.auth.PlanChangeResponseB!Z\x1fgRPCbigapp/Proto/protoPB;clientb\x06proto3"
 
 var (
 	file_client_proto_rawDescOnce sync.Once
@@ -568,7 +465,7 @@ func file_client_proto_rawDescGZIP() []byte {
 }
 
 var file_client_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_client_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
+var file_client_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_client_proto_goTypes = []any{
 	(Roles)(0),                 // 0: auth.Roles
 	(*User)(nil),               // 1: auth.User
@@ -577,8 +474,6 @@ var file_client_proto_goTypes = []any{
 	(*AuthResponse)(nil),       // 4: auth.AuthResponse
 	(*PlanChangeRequest)(nil),  // 5: auth.PlanChangeRequest
 	(*PlanChangeResponse)(nil), // 6: auth.PlanChangeResponse
-	(*IsAdminRequest)(nil),     // 7: auth.IsAdminRequest
-	(*IsAdminResponse)(nil),    // 8: auth.IsAdminResponse
 }
 var file_client_proto_depIdxs = []int32{
 	0, // 0: auth.User.user_role:type_name -> auth.Roles
@@ -588,13 +483,11 @@ var file_client_proto_depIdxs = []int32{
 	2, // 4: auth.AuthService.UserRegistration:input_type -> auth.RegisterRequest
 	3, // 5: auth.AuthService.UserLogin:input_type -> auth.LoginRequest
 	5, // 6: auth.AuthService.PlanChange:input_type -> auth.PlanChangeRequest
-	7, // 7: auth.AuthService.AdminCheck:input_type -> auth.IsAdminRequest
-	4, // 8: auth.AuthService.UserRegistration:output_type -> auth.AuthResponse
-	4, // 9: auth.AuthService.UserLogin:output_type -> auth.AuthResponse
-	6, // 10: auth.AuthService.PlanChange:output_type -> auth.PlanChangeResponse
-	8, // 11: auth.AuthService.AdminCheck:output_type -> auth.IsAdminResponse
-	8, // [8:12] is the sub-list for method output_type
-	4, // [4:8] is the sub-list for method input_type
+	4, // 7: auth.AuthService.UserRegistration:output_type -> auth.AuthResponse
+	4, // 8: auth.AuthService.UserLogin:output_type -> auth.AuthResponse
+	6, // 9: auth.AuthService.PlanChange:output_type -> auth.PlanChangeResponse
+	7, // [7:10] is the sub-list for method output_type
+	4, // [4:7] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
 	4, // [4:4] is the sub-list for extension extendee
 	0, // [0:4] is the sub-list for field type_name
@@ -611,7 +504,7 @@ func file_client_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_client_proto_rawDesc), len(file_client_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   8,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

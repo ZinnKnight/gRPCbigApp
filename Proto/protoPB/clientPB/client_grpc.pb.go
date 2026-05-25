@@ -23,7 +23,6 @@ const (
 	AuthService_UserRegistration_FullMethodName = "/auth.AuthService/UserRegistration"
 	AuthService_UserLogin_FullMethodName        = "/auth.AuthService/UserLogin"
 	AuthService_PlanChange_FullMethodName       = "/auth.AuthService/PlanChange"
-	AuthService_AdminCheck_FullMethodName       = "/auth.AuthService/AdminCheck"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -33,7 +32,6 @@ type AuthServiceClient interface {
 	UserRegistration(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	UserLogin(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*AuthResponse, error)
 	PlanChange(ctx context.Context, in *PlanChangeRequest, opts ...grpc.CallOption) (*PlanChangeResponse, error)
-	AdminCheck(ctx context.Context, in *IsAdminRequest, opts ...grpc.CallOption) (*IsAdminResponse, error)
 }
 
 type authServiceClient struct {
@@ -74,16 +72,6 @@ func (c *authServiceClient) PlanChange(ctx context.Context, in *PlanChangeReques
 	return out, nil
 }
 
-func (c *authServiceClient) AdminCheck(ctx context.Context, in *IsAdminRequest, opts ...grpc.CallOption) (*IsAdminResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(IsAdminResponse)
-	err := c.cc.Invoke(ctx, AuthService_AdminCheck_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -91,7 +79,6 @@ type AuthServiceServer interface {
 	UserRegistration(context.Context, *RegisterRequest) (*AuthResponse, error)
 	UserLogin(context.Context, *LoginRequest) (*AuthResponse, error)
 	PlanChange(context.Context, *PlanChangeRequest) (*PlanChangeResponse, error)
-	AdminCheck(context.Context, *IsAdminRequest) (*IsAdminResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -110,9 +97,6 @@ func (UnimplementedAuthServiceServer) UserLogin(context.Context, *LoginRequest) 
 }
 func (UnimplementedAuthServiceServer) PlanChange(context.Context, *PlanChangeRequest) (*PlanChangeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method PlanChange not implemented")
-}
-func (UnimplementedAuthServiceServer) AdminCheck(context.Context, *IsAdminRequest) (*IsAdminResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "method AdminCheck not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -189,24 +173,6 @@ func _AuthService_PlanChange_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_AdminCheck_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(IsAdminRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).AdminCheck(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_AdminCheck_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).AdminCheck(ctx, req.(*IsAdminRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -225,10 +191,6 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PlanChange",
 			Handler:    _AuthService_PlanChange_Handler,
-		},
-		{
-			MethodName: "AdminCheck",
-			Handler:    _AuthService_AdminCheck_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

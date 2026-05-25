@@ -115,46 +115,40 @@ func (us *UserUseCase) LoginUser(ctx context.Context, userID string) (*CSDomain.
 	return user, nil
 }
 
-func (us *UserUseCase) IsAdmin(ctx context.Context, userID string) (bool, error) {
-	ctx, span := csUseCaseTrace.Start(ctx, "IsAdmin")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("user.id", userID))
-
-	isAdmin, err := us.repo.IsAdmin(ctx, userID)
-	if err != nil {
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "usecase.IsAdmin failed")
-		return false, err
-	}
-	span.SetAttributes(attribute.Bool("user.isAdmin", isAdmin))
-	return isAdmin, nil
-}
-
-func (us *UserUseCase) ChangeUserPlan(ctx context.Context, userID string, newPlan CSDomain.UserPlan) error {
+func (us *UserUseCase) ChangeUserPlan(ctx context.Context, userName string, newPlan CSDomain.UserPlan) (*CSDomain.User, error) {
 
 	ctx, span := csUseCaseTrace.Start(ctx, "ChangeUserPlan", tracing.KindInternal)
 	defer span.End()
 
-	span.SetAttributes(attribute.String("user.id", userID), attribute.String("user.plan.new", string(newPlan)))
+	span.SetAttributes(attribute.String("user.name", userName), attribute.String("user.plan.new", string(newPlan)))
+
+	var updatedRole *CSDomain.User
 
 	err := us.txManager.Do(ctx, func(ctx context.Context) error {
-		if err := us.repo.UpdateUserPlan(ctx, userID, newPlan); err != nil {
+		user, err := us.repo.GetUser(ctx, userName)
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "usecase.GetUser failed")
+			return fmt.Errorf("usecase, changing user plan: %w", err)
+		}
+		if err := us.repo.UpdateUserPlan(ctx, user.UserName, newPlan); err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "usecase.UpdateUserPlan failed")
 			return fmt.Errorf("usecase, user plan changing: %w", err)
 		}
+		user.UserRole = newPlan
+		updatedRole = user
 
 		payload, err := json.Marshal(map[string]interface{}{
-			"user_id": userID,
-			"plan":    string(newPlan),
+			"user_name": userName,
+			"plan":      string(newPlan),
 		})
 		if err != nil {
 			return fmt.Errorf("usecase, user plan marshaling: %w", err)
 		}
 		return us.outbox.SaveEvent(ctx, &Outbox2.Event{
 			AggregatorType: "user",
-			AggregatorID:   userID,
+			AggregatorID:   userName,
 			EventType:      "UserPlanChanged",
 			Payload:        payload,
 			IdempotencyKey: uuid.New().String(),
@@ -165,6 +159,8 @@ func (us *UserUseCase) ChangeUserPlan(ctx context.Context, userID string, newPla
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "usecase.UpdateUserPlan failed")
+		return nil, fmt.Errorf("usecase, user plan changing: %w", err)
 	}
-	return err
+
+	return updatedRole, nil
 }

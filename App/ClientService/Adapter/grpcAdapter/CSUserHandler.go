@@ -96,14 +96,6 @@ func (uh *UserHandler) UserLogin(ctx context.Context, req *clientPB.LoginRequest
 	return &clientPB.AuthResponse{Token: token}, nil
 }
 
-func (uh *UserHandler) IsAdmin(ctx context.Context, req *clientPB.IsAdminRequest) (*clientPB.IsAdminResponse, error) {
-	isAdmin, err := uh.useCase.IsAdmin(ctx, req.UserName)
-	if err != nil {
-		return nil, UserErrorsMapper(err)
-	}
-	return &clientPB.IsAdminResponse{IsAdmin: isAdmin}, nil
-}
-
 func (uh *UserHandler) ChangeUserPlan(ctx context.Context, req *clientPB.PlanChangeRequest) (*clientPB.PlanChangeResponse, error) {
 	plan, ok := AuthCTX.GetUser(ctx)
 	if !ok {
