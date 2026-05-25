@@ -45,8 +45,8 @@ func DecimalPBToDecimal(d *decimalpb.Decimal) (decimal.Decimal, error) {
 	return decimal.NewFromString(d.GetValue())
 }
 
-func DecimalToDecimalPB(d *decimal.Decimal) decimalpb.Decimal {
-	return decimalpb.Decimal{
+func DecimalToDecimalPB(d decimal.Decimal) *decimalpb.Decimal {
+	return &decimalpb.Decimal{
 		Value: d.String(),
 	}
 }

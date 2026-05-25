@@ -25,8 +25,13 @@ const (
 	StatusCreated   OrderStatus = "order created"
 	StatusCancelled OrderStatus = "order cancelled"
 	StatusPrepared  OrderStatus = "order prepared"
-	StutusRejected  OrderStatus = "order rejected"
+	StatusRejected  OrderStatus = "order rejected"
+	StatusOrderDone OrderStatus = "order done"
 )
+
+func (s OrderStatus) IsTerminal() bool {
+	return s == StatusOrderDone || s == StatusRejected
+}
 
 var (
 	ErrOrderNotFound   = errors.New("order not found")

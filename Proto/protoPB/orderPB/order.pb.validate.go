@@ -380,28 +380,6 @@ func (m *CreateOrderRequest) validate(all bool) error {
 		}
 	}
 
-	if _, ok := _CreateOrderRequest_OrderStatus_NotInLookup[m.GetOrderStatus()]; ok {
-		err := CreateOrderRequestValidationError{
-			field:  "OrderStatus",
-			reason: "value must not be in list [UNREGISTERED_STATUS]",
-		}
-		if !all {
-			return err
-		}
-		errors = append(errors, err)
-	}
-
-	if _, ok := OrderStatus_name[int32(m.GetOrderStatus())]; !ok {
-		err := CreateOrderRequestValidationError{
-			field:  "OrderStatus",
-			reason: "value must be one of the defined enum values",
-		}
-		if !all {
-			return err
-		}
-		errors = append(errors, err)
-	}
-
 	if len(errors) > 0 {
 		return CreateOrderRequestMultiError(errors)
 	}
@@ -489,10 +467,6 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = CreateOrderRequestValidationError{}
-
-var _CreateOrderRequest_OrderStatus_NotInLookup = map[OrderStatus]struct{}{
-	0: {},
-}
 
 // Validate checks the field values on CreateOrderResponse with the rules
 // defined in the proto definition for this message. If any rules are
@@ -647,9 +621,9 @@ func (m *OrderStatusByIDRequest) validate(all bool) error {
 
 	var errors []error
 
-	if err := m._validateUuid(m.GetMarketId()); err != nil {
+	if err := m._validateUuid(m.GetOrderId()); err != nil {
 		err = OrderStatusByIDRequestValidationError{
-			field:  "MarketId",
+			field:  "OrderId",
 			reason: "value must be a valid UUID",
 			cause:  err,
 		}

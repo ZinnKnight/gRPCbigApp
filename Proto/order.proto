@@ -61,7 +61,7 @@ message CreateOrderResponse {
 }
 
 message OrderStatusByIDRequest {
-  string market_id = 1 [(validate.rules).string.uuid = true];
+  string order_id = 1 [(validate.rules).string.uuid = true];
 }
 
 message OrderStatusByIDResponse {
