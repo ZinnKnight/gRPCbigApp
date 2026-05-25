@@ -4,17 +4,18 @@
 // 	protoc        v6.33.4
 // source: order.proto
 
-package order
+package orderPB
 
 import (
+	reflect "reflect"
+	sync "sync"
+	unsafe "unsafe"
+
 	_ "github.com/envoyproxy/protoc-gen-validate/validate"
 	decimal "google.golang.org/genproto/googleapis/type/decimal"
 	money "google.golang.org/genproto/googleapis/type/money"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	reflect "reflect"
-	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -88,9 +89,9 @@ type Order struct {
 	OrderId       string                 `protobuf:"bytes,2,opt,name=order_id,json=orderId,proto3" json:"order_id,omitempty"`
 	MarketId      string                 `protobuf:"bytes,3,opt,name=market_id,json=marketId,proto3" json:"market_id,omitempty"`
 	Price         *money.Money           `protobuf:"bytes,4,opt,name=price,proto3" json:"price,omitempty"`
-	Amount        *decimal.Decimal       `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
-	OrderStatus   OrderStatus            `protobuf:"varint,6,opt,name=order_status,json=orderStatus,proto3,enum=order.OrderStatus" json:"order_status,omitempty"`
-	CreatedAt     int64                  `protobuf:"varint,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Amount      *decimal.Decimal `protobuf:"bytes,5,opt,name=amount,proto3" json:"amount,omitempty"`
+	OrderStatus OrderStatus      `protobuf:"varint,6,opt,name=order_status,json=orderStatus,proto3,enum=order.OrderStatus" json:"order_status,omitempty"`
+	CreatedAt   int64            `protobuf:"varint,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -178,8 +179,8 @@ type CreateOrderRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	MarketId      string                 `protobuf:"bytes,1,opt,name=market_id,json=marketId,proto3" json:"market_id,omitempty"`
 	Amount        *decimal.Decimal       `protobuf:"bytes,2,opt,name=amount,proto3" json:"amount,omitempty"`
-	Price         *money.Money           `protobuf:"bytes,3,opt,name=price,proto3" json:"price,omitempty"`
-	OrderStatus   OrderStatus            `protobuf:"varint,4,opt,name=order_status,json=orderStatus,proto3,enum=order.OrderStatus" json:"order_status,omitempty"`
+	Price         *money.Money `protobuf:"bytes,3,opt,name=price,proto3" json:"price,omitempty"`
+	OrderStatus   OrderStatus  `protobuf:"varint,4,opt,name=order_status,json=orderStatus,proto3,enum=order.OrderStatus" json:"order_status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

@@ -2,15 +2,21 @@ package grpcAdapter
 
 import (
 	"context"
+	"gRPCbigapp/App/OrderService/OSDomain"
 	"gRPCbigapp/App/OrderService/OSPorts"
-	orderpb "gRPCbigapp/Proto/order"
+	orderpb "gRPCbigapp/Proto/protoPB/orderPB"
 	"gRPCbigapp/Shared/Auth/AuthCTX"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
+	"time"
 
 	"github.com/shopspring/decimal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// т.к outbox вырезал, а ломать всю логику не хочется - поставил вот такую затычку
+
+const poolInterval = 5 * time.Second
 
 type OrderHandler struct {
 	orderpb.UnimplementedOrderServiceServer
@@ -22,6 +28,24 @@ func NewOrderHandler(log LoggerPorts.Logger, osp OSPorts.OSInboundPort) *OrderHa
 	return &OrderHandler{
 		logger:  log,
 		useCase: osp,
+	}
+}
+
+// сразу просматриваем статусы/конвертеры из pb.proto
+
+func pbProtoStatuses(status OSDomain.OrderStatus) orderpb.OrderStatus {
+	if val, ok := orderpb.OrderStatus_value[string(status)]; ok {
+		return orderpb.OrderStatus(val)
+	}
+	return orderpb.OrderStatus_UNREGISTERED_STATUS
+}
+
+func pbOrderConverter(convert OSDomain.OrderDomain) *orderpb.Order {
+	return &orderpb.Order{
+		UserId: convert.UserID,
+		OrderId: convert.OrderID,
+		MarketId: convert.MarketID,
+		Price:
 	}
 }
 
