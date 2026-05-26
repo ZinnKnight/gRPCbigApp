@@ -18,6 +18,10 @@ func NewJWTService(secretKey []byte, ttl time.Duration) *JWTService {
 	}
 }
 
+func (serv *JWTService) TTLinSeconds() int64 {
+	return int64(serv.ttl.Seconds())
+}
+
 func (serv *JWTService) GenerateToken(userID, userName, userPlan string) (string, error) {
 	claims := jwt.MapClaims{
 		"uid":       userID,
