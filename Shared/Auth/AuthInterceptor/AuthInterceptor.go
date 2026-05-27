@@ -16,14 +16,13 @@ import (
 const (
 	registration = "/auth.AuthService/UserRegistration"
 	login        = "/auth.AuthService/UserLogin"
+	pref         = "bearer "
 )
 
 var publicMethods = map[string]bool{
 	registration: true,
 	login:        true,
 }
-
-const pref = "bearer "
 
 func AuthInterceptor(jwtSecretKey []byte) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context,
@@ -34,6 +33,7 @@ func AuthInterceptor(jwtSecretKey []byte) grpc.UnaryServerInterceptor {
 		if publicMethods[info.FullMethod] {
 			return handler(ctx, req)
 		}
+
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
 			return nil, status.Errorf(codes.Unauthenticated, "metadata is not provided")
