@@ -2,30 +2,24 @@ package Tracing
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type Config struct {
 	Logger         LoggerPorts.Logger
-	Endpoint       string
 	ServiceName    string
 	ServiceVersion string
 	Environment    string
 	SampleRatio    float64
-	Enabled        bool
 }
 
 func Tracer(name string) trace.Tracer {
@@ -65,19 +59,16 @@ func buildResources(ctx context.Context, config Config) (*resource.Resource, err
 
 type ShutDownTracing func(context.Context) error
 
-func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
+func Init(ctx context.Context, config Config, exporter sdktrace.SpanExporter) (ShutDownTracing, error) {
 	logger := config.Logger
 
-	if !config.Enabled {
+	if exporter == nil {
 		otel.SetTextMapPropagator(defaultPropagator())
 		logInfo(logger, "tracing disabled, propagator only",
 			field("service.name", config.ServiceName))
 		return func(context.Context) error { return nil }, nil
 	}
 
-	if config.Endpoint == "" {
-		return nil, fmt.Errorf("no tracing endpoint provided")
-	}
 	if config.ServiceName == "" {
 		return nil, fmt.Errorf("no tracing service name provided")
 	}
@@ -93,33 +84,19 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 		return nil, fmt.Errorf("failed to build resorses: %w", err)
 	}
 
-	exp, err := otlptracegrpc.New(ctx,
-		otlptracegrpc.WithEndpoint(config.Endpoint),
-		// I not fully get how to make a credetionals +, its whole system work on localhost so its not really needed
-		otlptracegrpc.WithInsecure(),
-		otlptracegrpc.WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())),
-		otlptracegrpc.WithTimeout(5*time.Second),
-	)
-	if err != nil {
-		logErr(logger, "tracing: otlp exporter failed", err, field("endpoint", config.Endpoint))
-		return nil, fmt.Errorf("failed to init OTLP tracing: %w", err)
-	}
-
 	// Formulating spans in butches and send like that, so its will cost less
 
 	traceProvider := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exp,
+		sdktrace.WithBatcher(exporter,
 			sdktrace.WithMaxQueueSize(2048),
 			sdktrace.WithMaxExportBatchSize(512),
 			sdktrace.WithBatchTimeout(5*time.Second),
 		),
-
 		sdktrace.WithSampler(
 			sdktrace.ParentBased(sdktrace.TraceIDRatioBased(config.SampleRatio)),
 		),
 		sdktrace.WithResource(res),
 	)
-
 	otel.SetTracerProvider(traceProvider)
 	otel.SetTextMapPropagator(defaultPropagator())
 
@@ -128,7 +105,6 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 		field("service.version", config.ServiceVersion),
 		field("environment", config.Environment),
 		field("sample_ratio", config.SampleRatio),
-		field("endpoint", config.Endpoint),
 	)
 
 	return func(shutCTX context.Context) error {
@@ -137,18 +113,12 @@ func Init(ctx context.Context, config Config) (ShutDownTracing, error) {
 		if err := traceProvider.ForceFlush(flushCTX); err != nil {
 			logErr(logger, "tracing: failed to shutdown tracing", err)
 		}
-
-		shutDownErr := errors.Join(
-			traceProvider.Shutdown(shutCTX),
-			exp.Shutdown(shutCTX),
-		)
-
-		if shutDownErr != nil {
-			logErr(logger, "tracing: failed to shutdown tracing", shutDownErr)
-		} else {
-			logInfo(logger, "tracing: shutdown succeeded")
+		if err := traceProvider.Shutdown(shutCTX); err != nil {
+			logErr(logger, "tracing: failed to shutdown tracing", err)
+			return err
 		}
-		return shutDownErr
+		logInfo(logger, "tracing: shutdown completed")
+		return nil
 	}, nil
 }
 

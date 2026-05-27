@@ -15,19 +15,6 @@ var (
 	KindConsumer = trace.WithSpanKind(trace.SpanKindConsumer)
 )
 
-// inside package alice to unbound our export otel/attribute from public
-
-type atributeKeyVal = attribute.KeyValue
-
-func toKeyVal(dataIN []atributeKeyVal) []attribute.KeyValue {
-	out := make([]attribute.KeyValue, 0, len(dataIN))
-
-	for _, data := range dataIN {
-		out = append(out, data)
-	}
-	return out
-}
-
 func PostgresDB(statement string) []attribute.KeyValue {
 	return []attribute.KeyValue{
 		attribute.String("db.system", "postgresql"),
