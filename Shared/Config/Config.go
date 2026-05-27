@@ -17,10 +17,10 @@ type Config struct {
 	RateLimitPerMin int
 	// for Postres pool (вынес отдельно сюда значения, что позже будут поднянуты в отдельном слое)
 
-	DBMaxConn    int
-	DBMinConn    int
-	DBMaxConnTTL int
-	DBMinConnTTL int
+	DBMaxConn      int
+	DBMinConn      int
+	DBMaxConnTTL   int
+	DBMaxConnIdTTL int
 
 	// for Jaeger
 	ServiceName           string
@@ -42,10 +42,10 @@ func LoadConfig() (*Config, error) {
 		JWTSecretKey:    getEnv("JWT_SECRET", ""),
 		RateLimitPerMin: getEnvInt("RATE_LIMIT_PER_MIN", 100),
 		// for Pool
-		DBMaxConn:    getEnvInt("DB_MAX_CONN", 50),
-		DBMinConn:    getEnvInt("DB_MIN_CONN", 10),
-		DBMaxConnTTL: getEnvInt("DB_MAX_CONN_TTL", 30),
-		DBMinConnTTL: getEnvInt("DB_MIN_CONN_TTL", 5),
+		DBMaxConn:      getEnvInt("DB_MAX_CONN", 50),
+		DBMinConn:      getEnvInt("DB_MIN_CONN", 10),
+		DBMaxConnTTL:   getEnvInt("DB_MAX_CONN_TTL", 30),
+		DBMaxConnIdTTL: getEnvInt("DB_MIN_CONN_TTL", 5),
 		// for Jaeger
 		ServiceName:           getEnv("SERVICE_NAME", "unknown service"),
 		ServiceVersion:        getEnv("SERVICE_VERSION", "dev"),
