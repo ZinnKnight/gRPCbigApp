@@ -24,7 +24,7 @@ func (serv *JWTService) TTLinSeconds() int64 {
 
 func (serv *JWTService) GenerateToken(userID, userName, userPlan string) (string, error) {
 	claims := jwt.MapClaims{
-		"uid":       userID,
+		"uuid":      userID,
 		"user_name": userName,
 		"user_plan": userPlan,
 		"exp":       time.Now().Add(serv.ttl).Unix(),
