@@ -3,6 +3,7 @@ package AuthInterceptor
 import (
 	"context"
 	"gRPCbigapp/Shared/Auth/AuthCTX"
+	"gRPCbigapp/Shared/Auth/AuthClaims"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -23,13 +24,6 @@ var publicMethods = map[string]bool{
 }
 
 const pref = "bearer "
-
-type Claims struct {
-	UserID   string `json:"uuid"`
-	UserName string `json:"user_name"`
-	UserPlan string `json:"user_plan"`
-	jwt.RegisteredClaims
-}
 
 func AuthInterceptor(jwtSecretKey []byte) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context,
@@ -52,9 +46,9 @@ func AuthInterceptor(jwtSecretKey []byte) grpc.UnaryServerInterceptor {
 		if len(rawToken) < len(pref) || strings.EqualFold(rawToken[:len(pref)], pref) {
 			return nil, status.Errorf(codes.Unauthenticated, "authorization supposed use a Bearer schema")
 		}
-		tokenStr := strings.TrimPrefix(authHeaders[0], "Bearer ")
+		tokenStr := strings.TrimSpace(rawToken[len(pref):])
 
-		claims := &Claims{}
+		claims := &AuthClaims.Claims{}
 		_, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, status.Error(codes.Unauthenticated, "unexpected signing method")
