@@ -11,6 +11,7 @@ type Config struct {
 	RedisAddr       string
 	RedisPassword   string
 	RedisDB         int
+	RedisPoolSize   int
 	GRPCPort        int
 	MetricsPort     int
 	JWTSecretKey    string
@@ -37,6 +38,7 @@ func LoadConfig() (*Config, error) {
 		RedisAddr:       getEnv("REDIS_ADDR", "localhost:6379"),
 		RedisPassword:   getEnv("REDIS_PASSWORD", ""),
 		RedisDB:         getEnvInt("REDIS_DB", 0),
+		RedisPoolSize:   getEnvInt("REDIS_POOL_SIZE", 100),
 		GRPCPort:        getEnvInt("GRPC_PORT", 50051),
 		MetricsPort:     getEnvInt("MetricsPort", 2112),
 		JWTSecretKey:    getEnv("JWT_SECRET", ""),
