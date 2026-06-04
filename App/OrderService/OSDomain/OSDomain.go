@@ -34,11 +34,12 @@ func (s OrderStatus) IsTerminal() bool {
 }
 
 var (
-	ErrOrderNotFound   = errors.New("order not found")
-	ErrInvalidPrice    = errors.New("invalid price")
-	ErrInvalidAmount   = errors.New("invalid amount")
-	ErrInvalidMarketID = errors.New("invalid order id")
-	ErrInvalidUserID   = errors.New("invalid order id")
+	ErrOrderNotFound      = errors.New("order not found")
+	ErrInvalidPrice       = errors.New("invalid price")
+	ErrInvalidAmount      = errors.New("invalid amount")
+	ErrInvalidMarketID    = errors.New("invalid order id")
+	ErrInvalidUserID      = errors.New("invalid user id")
+	ErrOrderAlreadyExists = errors.New("order already exists")
 )
 
 func NewOrder(userID, marketID string, price, amount decimal.Decimal) (*OrderDomain, error) {
