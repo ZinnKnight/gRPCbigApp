@@ -54,16 +54,20 @@ func (rc *UserRepo) SaveUser(ctx context.Context, user *CSDomain.User) error {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "db.SaveUser failed")
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return CSDomain.ErrUserAlreadyExists
+		}
 		return fmt.Errorf("postgres, error saving user: %w", err)
 	}
 	return nil
 }
 
-func (rc *UserRepo) GetUser(ctx context.Context, userID string) (*CSDomain.User, error) {
+func (rc *UserRepo) GetUser(ctx context.Context, userName string) (*CSDomain.User, error) {
 	const query = `
 		SELECT user_id, user_name, user_password, user_role
-		FROM users_data WHERE user_id = $1`
-	row := rc.connection(ctx).QueryRow(ctx, query, userID)
+		FROM users_data WHERE user_name = $1`
+	row := rc.connection(ctx).QueryRow(ctx, query, userName)
 
 	ctx, span := trace.Start(ctx, "db.GetUser", tracing.KindClient)
 	defer span.End()
@@ -80,7 +84,7 @@ func (rc *UserRepo) GetUser(ctx context.Context, userID string) (*CSDomain.User,
 		span.SetStatus(codes.Error, "db.GetUser failed")
 		return nil, fmt.Errorf("postgres, error find user: %w", err)
 	}
-	user.UserRole = CSDomain.UserPlan(user.UserRole)
+	user.UserRole = CSDomain.UserPlan(role)
 	return &user, nil
 }
 

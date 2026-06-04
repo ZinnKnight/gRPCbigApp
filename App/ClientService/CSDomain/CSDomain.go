@@ -31,12 +31,6 @@ func (usr *User) ValidateUser() error {
 	return nil
 }
 
-// временно сделал так, потом доделаю криптографию и нормальное сохранение
-
-func (usr *User) ValidatePassword(password string) bool {
-	return usr.UserPassword == password
-}
-
 var (
 	ErrUserNotFound         = errors.New("user not found")
 	ErrUserAlreadyExists    = errors.New("user already exists")

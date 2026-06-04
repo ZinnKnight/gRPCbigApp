@@ -5,9 +5,6 @@ import (
 	"gRPCbigapp/App/ClientService/CSDomain"
 )
 
-// эту кострукцию добавил т.к в дальнейшем данноеобращение будет использоватся несколько раз
-// оверхед на упрощение в цену скорости
-
 type RegisterUserInput struct {
 	UserName     string
 	UserPassword string
