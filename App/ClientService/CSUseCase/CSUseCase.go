@@ -8,9 +8,9 @@ import (
 	"gRPCbigapp/App/ClientService/CSPorts"
 	"gRPCbigapp/Shared/EventActionMockOfOutbox"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
-	"gRPCbigapp/Shared/PasswordValidator"
 	tracing "gRPCbigapp/Shared/Tracing"
 	"gRPCbigapp/Shared/Txmanager"
+	"gRPCbigapp/Shared/ValidationIntercepter"
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
@@ -59,7 +59,7 @@ func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUse
 	}
 	span.SetAttributes(attribute.String("user.id", user.UserID))
 
-	hashedPassword, err := PasswordValidator.Hash(user.UserPassword)
+	hashedPassword, err := ValidationIntercepter.Hash(user.UserPassword)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "client_service.RegisterUser failed: invalid password hash")
@@ -118,7 +118,7 @@ func (us *UserUseCase) LoginUser(ctx context.Context, userName, userPassword str
 		span.SetStatus(codes.Error, "usecase.GetUser failed")
 		return nil, fmt.Errorf("usecase, logging user: %w", err)
 	}
-	if err := PasswordValidator.Verify(user.UserPassword, userPassword); err != nil {
+	if err := ValidationIntercepter.Verify(user.UserPassword, userPassword); err != nil {
 		span.SetStatus(codes.Error, "usecase.VerifyUser incorrect credentials")
 		return nil, CSDomain.ErrIncorrectCredentials
 	}
