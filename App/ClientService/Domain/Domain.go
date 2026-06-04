@@ -1,4 +1,4 @@
-package CSDomain
+package Domain
 
 import "errors"
 

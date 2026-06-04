@@ -1,17 +1,17 @@
 package ErrorInterceptor
 
 import (
-	"gRPCbigapp/App/ClientService/CSDomain"
+	"gRPCbigapp/App/ClientService/Domain"
 	"gRPCbigapp/App/OrderService/OSDomain"
 	"gRPCbigapp/App/SpotInstrumentService/SISDomain"
 )
 
 func init() {
-	RegisterError(CSDomain.ErrIncorrectCredentials, Unauthenticated, "Некорректный логин или пароль")
-	RegisterError(CSDomain.ErrEmptyName, Invalid, "Имя пользователя не может быть пустым")
-	RegisterError(CSDomain.ErrEmptyPassword, Invalid, "Пароль не может быть пустым")
-	RegisterError(CSDomain.ErrUserNotFound, NotFound, "Такого пользователя не существует")
-	RegisterError(CSDomain.ErrUserAlreadyExists, AlreadyExists, "Такой пользователь уже существует")
+	RegisterError(Domain.ErrIncorrectCredentials, Unauthenticated, "Некорректный логин или пароль")
+	RegisterError(Domain.ErrEmptyName, Invalid, "Имя пользователя не может быть пустым")
+	RegisterError(Domain.ErrEmptyPassword, Invalid, "Пароль не может быть пустым")
+	RegisterError(Domain.ErrUserNotFound, NotFound, "Такого пользователя не существует")
+	RegisterError(Domain.ErrUserAlreadyExists, AlreadyExists, "Такой пользователь уже существует")
 
 	RegisterError(OSDomain.ErrOrderNotFound, NotFound, "Такого заказа не существует")
 	RegisterError(OSDomain.ErrInvalidUserID, Invalid, "Некорректный идентификатор пользователя")

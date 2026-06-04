@@ -6,11 +6,9 @@ import (
 	"gRPCbigapp/App/OrderService/OSPorts"
 	orderpb "gRPCbigapp/Proto/protoPB/orderPB"
 	"gRPCbigapp/Shared/Auth/AuthCTX"
+	"gRPCbigapp/Shared/ErrorInterceptor"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	"time"
-	
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	moneyconverter "gRPCbigapp/Shared/Converters/Money"
 )
@@ -63,7 +61,7 @@ func (o *OrderHandler) CreateOrder(ctx context.Context, req *orderpb.CreateOrder
 
 	amount, err := moneyconverter.DecimalPBToDecimal(req.GetAmount())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "incorrect amount")
+		return nil, ErrorInterceptor.NewError(ErrorInterceptor.Invalid, "Некорректная сумма заказа", err)
 	}
 
 	cmd := OSPorts.CreteOrder{
@@ -78,7 +76,7 @@ func (o *OrderHandler) CreateOrder(ctx context.Context, req *orderpb.CreateOrder
 		o.logger.LogError("grpc, failed to crete order",
 			LoggerPorts.Field{Key: "id", Value: user.UserID},
 			LoggerPorts.Field{Key: "error", Value: err.Error()})
-		return nil, DomainErrorMapping(err)
+		return nil, err
 	}
 
 	return &orderpb.CreateOrderResponse{CreateOrderResponse: pbOrderConverter(orderID)}, nil
@@ -91,7 +89,7 @@ func (o *OrderHandler) GetOrderStatusByID(ctx context.Context, req *orderpb.Orde
 	}
 	order, err := o.useCase.GetOrderByID(ctx, req.GetOrderId(), user.UserID)
 	if err != nil {
-		return nil, DomainErrorMapping(err)
+		return nil, err
 	}
 	return &orderpb.OrderStatusByIDResponse{
 		OrderStatusResponse: pbOrderConverter(order),
@@ -143,7 +141,7 @@ func (o *OrderHandler) StreamUpdateOrder(req *orderpb.StreamOrderRequest, stream
 		order, err := o.useCase.GetOrderByID(ctx, orderID, user.UserID)
 
 		if err != nil {
-			return false, DomainErrorMapping(err)
+			return false, ErrorInterceptor.GRPCConnector(err)
 		}
 
 		if firstSend || order.OrderStatus != lastSend {

@@ -20,13 +20,13 @@ type OrderDomain struct {
 
 type OrderStatus string
 
-// Add StatusRejected for more clarity with StatusCanceled
 const (
-	StatusCreated   OrderStatus = "order created"
-	StatusCancelled OrderStatus = "order cancelled"
-	StatusPrepared  OrderStatus = "order prepared"
-	StatusRejected  OrderStatus = "order rejected"
-	StatusOrderDone OrderStatus = "order done"
+	StatusUnregistered OrderStatus = "UNREGISTERED_STATUS"
+	StatusCreated      OrderStatus = "ORDER_CREATED"
+	StatusReserved     OrderStatus = "ORDER_RESERVED"
+	StatusRejected     OrderStatus = "ORDER_REJECTED"
+	StatusOrderDone    OrderStatus = "ORDER_DONE"
+	StatusInDelivery   OrderStatus = "ORDER_IN_DELIVERY"
 )
 
 func (s OrderStatus) IsTerminal() bool {
@@ -43,7 +43,6 @@ var (
 )
 
 func NewOrder(userID, marketID string, price, amount decimal.Decimal) (*OrderDomain, error) {
-	// Probably switch better, not 100% sure for growth
 	if userID == "" {
 		return nil, ErrInvalidUserID
 	}

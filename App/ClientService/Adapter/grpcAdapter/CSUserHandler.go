@@ -2,8 +2,8 @@ package grpcAdapter
 
 import (
 	"context"
-	"gRPCbigapp/App/ClientService/CSDomain"
-	"gRPCbigapp/App/ClientService/CSPorts"
+	"gRPCbigapp/App/ClientService/Domain"
+	"gRPCbigapp/App/ClientService/Ports"
 	"gRPCbigapp/Proto/protoPB/clientPB"
 	"gRPCbigapp/Shared/Auth/AuthAdapter"
 	"gRPCbigapp/Shared/Auth/AuthCTX"
@@ -16,12 +16,12 @@ import (
 
 type UserHandler struct {
 	clientPB.UnimplementedAuthServiceServer
-	useCase CSPorts.UserInboundPort
+	useCase Ports.UserInboundPort
 	jwt     *AuthAdapter.JWTService
 	logger  LoggerPorts.Logger
 }
 
-func NewUserhandler(uc CSPorts.UserInboundPort, log LoggerPorts.Logger, j *AuthAdapter.JWTService) *UserHandler {
+func NewUserhandler(uc Ports.UserInboundPort, log LoggerPorts.Logger, j *AuthAdapter.JWTService) *UserHandler {
 	return &UserHandler{
 		useCase: uc,
 		jwt:     j,
@@ -29,15 +29,15 @@ func NewUserhandler(uc CSPorts.UserInboundPort, log LoggerPorts.Logger, j *AuthA
 	}
 }
 
-func planToUser(plan CSDomain.UserPlan) clientPB.Roles {
+func planToUser(plan Domain.UserPlan) clientPB.Roles {
 	if val, ok := clientPB.Roles_value[string(plan)]; ok {
 		return clientPB.Roles(val)
 	}
 	return clientPB.Roles_UNAUTHORISED_USER
 }
 
-func roleToUser(role clientPB.Roles) CSDomain.UserPlan {
-	return CSDomain.UserPlan(role.String())
+func roleToUser(role clientPB.Roles) Domain.UserPlan {
+	return Domain.UserPlan(role.String())
 }
 
 // Это временный мок, как будет кафка - необходимо будет переделать
@@ -46,7 +46,7 @@ func (uh *UserHandler) planChangeActionCompleted(_ context.Context, _ *AuthCTX.U
 }
 
 func (uh *UserHandler) UserRegistration(ctx context.Context, req *clientPB.RegisterRequest) (*clientPB.AuthResponse, error) {
-	rui := CSPorts.RegisterUserInput{
+	rui := Ports.RegisterUserInput{
 		UserName:     req.GetUserName(),
 		UserPassword: req.GetUserPassword(),
 	}

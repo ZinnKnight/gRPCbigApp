@@ -7,15 +7,16 @@ import (
 )
 
 type Config struct {
-	DatabaseURL     string
-	RedisAddr       string
-	RedisPassword   string
-	RedisDB         int
-	RedisPoolSize   int
-	GRPCPort        int
-	MetricsPort     int
-	JWTSecretKey    string
-	RateLimitPerMin int
+	DatabaseURL       string
+	RedisAddr         string
+	RedisPassword     string
+	RedisDB           int
+	RedisPoolSize     int
+	RedisMinIdleConns int
+	GRPCPort          int
+	MetricsPort       int
+	JWTSecretKey      string
+	RateLimitPerMin   int
 	// for Postres pool (вынес отдельно сюда значения, что позже будут поднянуты в отдельном слое)
 
 	DBMaxConn      int

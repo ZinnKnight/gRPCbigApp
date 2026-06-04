@@ -57,6 +57,10 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)`
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "db.SaveOrder failed")
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return OSDomain.ErrOrderAlreadyExists
+		}
 		return fmt.Errorf("postgres, save order: %w", err)
 	}
 	return nil

@@ -1,11 +1,11 @@
-package CSUseCase
+package UseCase
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gRPCbigapp/App/ClientService/CSDomain"
-	"gRPCbigapp/App/ClientService/CSPorts"
+	"gRPCbigapp/App/ClientService/Domain"
+	"gRPCbigapp/App/ClientService/Ports"
 	"gRPCbigapp/Shared/EventActionMockOfOutbox"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	tracing "gRPCbigapp/Shared/Tracing"
@@ -19,16 +19,16 @@ import (
 
 var csUseCaseTrace = tracing.Tracer("usecase.client_service")
 
-var _ CSPorts.UserInboundPort = (*UserUseCase)(nil)
+var _ Ports.UserInboundPort = (*UserUseCase)(nil)
 
 type UserUseCase struct {
-	repo      CSPorts.CSOutboundPorts
+	repo      Ports.CSOutboundPorts
 	events    EventActionMockOfOutbox.Emmiter
 	txManager *Txmanager.TxManager
 	logger    LoggerPorts.Logger
 }
 
-func NewUserUseCase(repo CSPorts.CSOutboundPorts, event EventActionMockOfOutbox.Emmiter, txManager *Txmanager.TxManager,
+func NewUserUseCase(repo Ports.CSOutboundPorts, event EventActionMockOfOutbox.Emmiter, txManager *Txmanager.TxManager,
 	logger LoggerPorts.Logger) *UserUseCase {
 	return &UserUseCase{
 		events:    event,
@@ -38,18 +38,18 @@ func NewUserUseCase(repo CSPorts.CSOutboundPorts, event EventActionMockOfOutbox.
 	}
 }
 
-func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUserInput) (*CSDomain.User, error) {
+func (us *UserUseCase) RegisterUser(ctx context.Context, rui Ports.RegisterUserInput) (*Domain.User, error) {
 
 	ctx, span := csUseCaseTrace.Start(ctx, "RegisterUser", tracing.KindInternal)
 	defer span.End()
 
 	span.SetAttributes(attribute.String("user.name", rui.UserName))
 
-	user := &CSDomain.User{
+	user := &Domain.User{
 		UserID:       uuid.New().String(),
 		UserName:     rui.UserName,
 		UserPassword: rui.UserPassword,
-		UserRole:     CSDomain.Free,
+		UserRole:     Domain.Free,
 	}
 
 	if err := user.ValidateUser(); err != nil {
@@ -105,7 +105,7 @@ func (us *UserUseCase) RegisterUser(ctx context.Context, rui CSPorts.RegisterUse
 	return user, nil
 }
 
-func (us *UserUseCase) LoginUser(ctx context.Context, userName, userPassword string) (*CSDomain.User, error) {
+func (us *UserUseCase) LoginUser(ctx context.Context, userName, userPassword string) (*Domain.User, error) {
 
 	ctx, span := csUseCaseTrace.Start(ctx, "LoginUser", tracing.KindInternal)
 	defer span.End()
@@ -120,19 +120,19 @@ func (us *UserUseCase) LoginUser(ctx context.Context, userName, userPassword str
 	}
 	if err := ValidationIntercepter.Verify(user.UserPassword, userPassword); err != nil {
 		span.SetStatus(codes.Error, "usecase.VerifyUser incorrect credentials")
-		return nil, CSDomain.ErrIncorrectCredentials
+		return nil, Domain.ErrIncorrectCredentials
 	}
 	return user, nil
 }
 
-func (us *UserUseCase) ChangeUserPlan(ctx context.Context, userName string, newPlan CSDomain.UserPlan) (*CSDomain.User, error) {
+func (us *UserUseCase) ChangeUserPlan(ctx context.Context, userName string, newPlan Domain.UserPlan) (*Domain.User, error) {
 
 	ctx, span := csUseCaseTrace.Start(ctx, "ChangeUserPlan", tracing.KindInternal)
 	defer span.End()
 
 	span.SetAttributes(attribute.String("user.name", userName), attribute.String("user.plan.new", string(newPlan)))
 
-	var updatedRole *CSDomain.User
+	var updatedRole *Domain.User
 
 	err := us.txManager.Do(ctx, func(ctx context.Context) error {
 		user, err := us.repo.GetUser(ctx, userName)
