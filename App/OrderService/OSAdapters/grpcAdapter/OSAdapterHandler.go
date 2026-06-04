@@ -109,7 +109,7 @@ func (o *OrderHandler) GetAllOrderStatuses(ctx context.Context, req *orderpb.Ord
 
 	orders, nextPageToken, err := o.useCase.GetAllOrders(ctx, user.UserID, req.GetPageToken(), size)
 	if err != nil {
-		return nil, DomainErrorMapping(err)
+		return nil, err
 	}
 
 	protoOrders := make([]*orderpb.Order, 0, len(orders))
