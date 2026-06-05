@@ -4,10 +4,13 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 go build -o /bin/order-service ./CMD/OrderServiceCMD
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" \
+    -o /bin/order-service ./App/OrderService/OrderServiceCMD
 
 FROM alpine:3.19
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates tzdata
 COPY --from=builder /bin/order-service /bin/order-service
+
+EXPOSE 50051 2112
 
 ENTRYPOINT ["/bin/order-service"]
