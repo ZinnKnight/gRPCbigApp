@@ -6,6 +6,7 @@ import (
 )
 
 type MarketDomain struct {
+	MarketName    string
 	GoodsID       string
 	MarketID      string
 	Accessibility bool

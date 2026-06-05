@@ -6,6 +6,6 @@ import (
 )
 
 type SISInboundPort interface {
-	GetMarketByID(ctx context.Context, marketID string) (*SISDomain.MarketDomain, error)
+	GetMarketByName(ctx context.Context, marketName string) (*SISDomain.MarketDomain, error)
 	GetAllMarkets(ctx context.Context, pageSize int, curs string) ([]*SISDomain.MarketDomain, string, error)
 }
