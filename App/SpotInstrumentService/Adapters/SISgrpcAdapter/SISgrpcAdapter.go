@@ -2,14 +2,10 @@ package SISgrpcAdapter
 
 import (
 	"context"
-	"errors"
 	"gRPCbigapp/App/SpotInstrumentService/SISDomain"
 	"gRPCbigapp/App/SpotInstrumentService/SISPorts"
-	marketpb "gRPCbigapp/Proto/market"
+	marketpb "gRPCbigapp/Proto/protoPB/marketPB"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type SISgrpcHandler struct {
@@ -25,54 +21,54 @@ func NewSISgrpcHandler(sisH SISPorts.SISInboundPort, logger LoggerPorts.Logger) 
 	}
 }
 
-func marketErrorsMaper(err error) error {
-	switch {
-	case errors.Is(err, SISDomain.ErrMarketNotFound):
-		return status.Error(codes.NotFound, err.Error())
-	default:
-		return status.Error(codes.Internal, "sisgrpcAdapter, Internal error")
+func protoMarketMapper(m *SISDomain.MarketDomain) *marketpb.Market {
+	var ttl int64
+
+	if m.TTL != nil {
+		ttl = m.TTL.Unix()
 	}
+
+	return &marketpb.Market{
+		MarketName:          m.MarketName,
+		GoodsId:             m.GoodsID,
+		MarketId:            m.MarketID,
+		MarketAccessibility: m.Accessibility,
+		MarketTtl:           ttl,
+	}
+
 }
 
-func (h *SISgrpcHandler) ViewMarketByID(ctx context.Context, req *marketpb.ViewMarketsByIDRequest) (*marketpb.ViewMarketsByIDResponse, error) {
-	market, err := h.useCase.GetMarketByID(ctx, req.MarketId)
+func (h *SISgrpcHandler) ViewMarketByID(ctx context.Context, req *marketpb.ViewMarketRequest) (*marketpb.ViewMarketResponse, error) {
+	market, err := h.useCase.GetMarketByName(ctx, req.GetViewMarketRequest())
 	if err != nil {
 		h.logger.LogError("sisgrpcAdapter, failed to view a market by id",
-			LoggerPorts.Field{Key: "id", Value: req.MarketId},
+			LoggerPorts.Field{Key: "name", Value: req.GetViewMarketRequest()},
 			LoggerPorts.Field{Key: "error", Value: err.Error()})
-		return nil, marketErrorsMaper(err)
+		return nil, err
 	}
-	return &marketpb.ViewMarketsByIDResponse{
-		Market: &marketpb.Market{
-			MarketId: req.MarketId,
-			Enable:   market.Accessibility,
-		},
+	return &marketpb.ViewMarketResponse{
+		ViewMarketResponse: protoMarketMapper(market),
 	}, nil
 }
 
 func (h *SISgrpcHandler) ViewAllMarkets(ctx context.Context, req *marketpb.ViewMarketsAllRequest) (*marketpb.ViewMarketsAllResponse, error) {
-	size := int(req.PageSize)
+	size := int(req.GetPageSize())
 	if size <= 0 || size > 50 {
 		size = 10
 	}
 
-	curs := req.PageToken
-
-	markets, nextCurs, err := h.useCase.GetAllMarkets(ctx, size, curs)
+	markets, nextCurs, err := h.useCase.GetAllMarkets(ctx, size, req.GetPageToken())
 	if err != nil {
 		h.logger.LogError("sisgrpcAdapter, failed to view all markets",
 			LoggerPorts.Field{Key: "error", Value: err.Error()},
 		)
-		return nil, marketErrorsMaper(err)
+		return nil, err
 	}
 
 	pbMarkets := make([]*marketpb.Market, 0, len(markets))
 
 	for _, market := range markets {
-		pbMarkets = append(pbMarkets, &marketpb.Market{
-			MarketId: market.MarketID,
-			Enable:   market.Accessibility,
-		})
+		pbMarkets = append(pbMarkets, protoMarketMapper(market))
 	}
 	return &marketpb.ViewMarketsAllResponse{Markets: pbMarkets, NextPageToken: nextCurs}, nil
 }

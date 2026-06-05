@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"gRPCbigapp/App/ClientService/CSDomain"
-	"gRPCbigapp/App/ClientService/CSPorts"
+	"gRPCbigapp/App/ClientService/Domain"
+	"gRPCbigapp/App/ClientService/Ports"
 	tracing "gRPCbigapp/Shared/Tracing"
 	"gRPCbigapp/Shared/Txmanager"
 
@@ -17,7 +17,7 @@ import (
 
 var trace = tracing.Tracer("db.user_repo")
 
-var _ CSPorts.CSOutboundPorts = (*UserRepo)(nil)
+var _ Ports.CSOutboundPorts = (*UserRepo)(nil)
 
 type UserRepo struct {
 	pool *pgxpool.Pool
@@ -40,7 +40,7 @@ func (rc *UserRepo) connection(ctx context.Context) dbExecutor {
 	return rc.pool
 }
 
-func (rc *UserRepo) SaveUser(ctx context.Context, user *CSDomain.User) error {
+func (rc *UserRepo) SaveUser(ctx context.Context, user *Domain.User) error {
 	const query = `
 		INSERT INTO users_data (user_id, user_name, user_password, user_role)
 		VALUES ($1, $2, $3, $4)`
@@ -54,37 +54,41 @@ func (rc *UserRepo) SaveUser(ctx context.Context, user *CSDomain.User) error {
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "db.SaveUser failed")
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return Domain.ErrUserAlreadyExists
+		}
 		return fmt.Errorf("postgres, error saving user: %w", err)
 	}
 	return nil
 }
 
-func (rc *UserRepo) GetUser(ctx context.Context, userID string) (*CSDomain.User, error) {
+func (rc *UserRepo) GetUser(ctx context.Context, userName string) (*Domain.User, error) {
 	const query = `
 		SELECT user_id, user_name, user_password, user_role
-		FROM users_data WHERE user_id = $1`
-	row := rc.connection(ctx).QueryRow(ctx, query, userID)
+		FROM users_data WHERE user_name = $1`
+	row := rc.connection(ctx).QueryRow(ctx, query, userName)
 
 	ctx, span := trace.Start(ctx, "db.GetUser", tracing.KindClient)
 	defer span.End()
 
 	span.SetAttributes(tracing.PostgresDB(query)...)
 
-	var user CSDomain.User
+	var user Domain.User
 	var role string
 	if err := row.Scan(&user.UserID, &user.UserName, &user.UserPassword, &role); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, CSDomain.ErrUserNotFound
+			return nil, Domain.ErrUserNotFound
 		}
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "db.GetUser failed")
 		return nil, fmt.Errorf("postgres, error find user: %w", err)
 	}
-	user.UserRole = CSDomain.UserPlan(user.UserRole)
+	user.UserRole = Domain.UserPlan(role)
 	return &user, nil
 }
 
-func (rc *UserRepo) UpdateUserPlan(ctx context.Context, userID string, userPlan CSDomain.UserPlan) error {
+func (rc *UserRepo) UpdateUserPlan(ctx context.Context, userID string, userPlan Domain.UserPlan) error {
 	const query = `UPDATE users_data SET user_role = $1 WHERE user_id = $2`
 
 	ctx, span := trace.Start(ctx, "db.UpdateUserPlan", tracing.KindClient)
@@ -99,27 +103,4 @@ func (rc *UserRepo) UpdateUserPlan(ctx context.Context, userID string, userPlan 
 		return fmt.Errorf("postgres, error updating user plan: %w", err)
 	}
 	return nil
-}
-
-func (rc *UserRepo) IsAdmin(ctx context.Context, userID string) (bool, error) {
-	const query = `SELECT user_role FROM users_data WHERE user_id = $1`
-
-	ctx, span := trace.Start(ctx, "db.IsAdmin", tracing.KindClient)
-	defer span.End()
-
-	span.SetAttributes(tracing.PostgresDB(query)...)
-
-	row := rc.connection(ctx).QueryRow(ctx, query, userID)
-
-	var role string
-	if err := row.Scan(&role); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			span.AddEvent("user_not_found")
-			return false, CSDomain.ErrUserNotFound
-		}
-		span.RecordError(err)
-		span.SetStatus(codes.Error, "db.IsAdmin failed")
-		return false, fmt.Errorf("postgres, error isAdmin: %w", err)
-	}
-	return CSDomain.UserPlan(role) == CSDomain.AdminRole, nil
 }

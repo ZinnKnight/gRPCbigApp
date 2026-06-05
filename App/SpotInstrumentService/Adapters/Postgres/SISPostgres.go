@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"gRPCbigapp/App/SpotInstrumentService/SISDomain"
+	"gRPCbigapp/App/SpotInstrumentService/SISPorts"
 	tracing "gRPCbigapp/Shared/Tracing"
 	"gRPCbigapp/Shared/Txmanager"
 
@@ -16,7 +17,7 @@ import (
 
 var trace = tracing.Tracer("db.market_repo")
 
-//var _ SISDomain.MarketDomain = (*SISMarketRepo)(nil)
+var _ SISPorts.SISOutboundRepo = (*SISMarketRepo)(nil)
 
 type SISMarketRepo struct {
 	pool *pgxpool.Pool
@@ -39,8 +40,8 @@ func (sisr *SISMarketRepo) connection(ctx context.Context) dtExecutor {
 	return sisr.pool
 }
 
-func (sisr *SISMarketRepo) FindByID(ctx context.Context, marketId string) (*SISDomain.MarketDomain, error) {
-	const query = `SELECT market_id, goods_id, accessibility, ttl FROM markets WHERE market_id = $1`
+func (sisr *SISMarketRepo) FindByName(ctx context.Context, marketId string) (*SISDomain.MarketDomain, error) {
+	const query = `SELECT market_name, goods_id, accessibility, ttl FROM markets WHERE market_name = $1`
 
 	ctx, span := trace.Start(ctx, "db.FindByID", tracing.KindClient)
 	defer span.End()
@@ -63,8 +64,7 @@ func (sisr *SISMarketRepo) FindByID(ctx context.Context, marketId string) (*SISD
 }
 
 func (sisr *SISMarketRepo) FindAll(ctx context.Context, limit int, curs string) ([]*SISDomain.MarketDomain, error) {
-	// Change query on more restricted form
-	const query = `SELECT market_id, goods_id, accessibility, ttl 
+	const query = `SELECT market_id, market_name, goods_id, accessibility, ttl 
 	FROM markets 
 	WHERE market_id > $1
 	ORDER BY market_id ASC
@@ -86,7 +86,7 @@ func (sisr *SISMarketRepo) FindAll(ctx context.Context, limit int, curs string) 
 	var markets []*SISDomain.MarketDomain
 	for rows.Next() {
 		var m SISDomain.MarketDomain
-		if err := rows.Scan(&m.MarketID, &m.GoodsID, &m.Accessibility, &m.TTL); err != nil {
+		if err := rows.Scan(&m.MarketID, &m.MarketName, &m.GoodsID, &m.Accessibility, &m.TTL); err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "market_repo.FindAll scan failed")
 			return nil, fmt.Errorf("SISMarketRepo, scan markets FindAllMarkets: %w", err)

@@ -8,7 +8,7 @@ import (
 )
 
 type OSInboundPort interface {
-	CreteOrder(ctx context.Context, cmd CreteOrder) (string, error)
+	CreteOrder(ctx context.Context, cmd CreteOrder) (*OSDomain.OrderDomain, error)
 	GetOrderByID(ctx context.Context, orderID, UserID string) (*OSDomain.OrderDomain, error)
 	GetAllOrders(ctx context.Context, userID, pageToken string, pageSize int) ([]*OSDomain.OrderDomain, string, error)
 }

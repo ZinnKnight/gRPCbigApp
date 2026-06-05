@@ -25,14 +25,14 @@ func NewSISUseCase(repo SISPorts.SISOutboundRepo, logger LoggerPorts.Logger) *SI
 	return &SISUseCase{repo: repo, logger: logger}
 }
 
-func (sis *SISUseCase) GetMarketByID(ctx context.Context, marketID string) (*SISDomain.MarketDomain, error) {
+func (sis *SISUseCase) GetMarketByName(ctx context.Context, marketName string) (*SISDomain.MarketDomain, error) {
 
 	ctx, span := trace.Start(ctx, "GetMarketByID", tracing.KindClient)
 	defer span.End()
 
-	span.SetAttributes(attribute.String("marketID", marketID))
+	span.SetAttributes(attribute.String("marketID", marketName))
 
-	market, err := sis.repo.FindByID(ctx, marketID)
+	market, err := sis.repo.FindByName(ctx, marketName)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "repository.GetMarketByID failed")

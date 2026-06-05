@@ -2,15 +2,20 @@ package grpcAdapter
 
 import (
 	"context"
+	"gRPCbigapp/App/OrderService/OSDomain"
 	"gRPCbigapp/App/OrderService/OSPorts"
-	orderpb "gRPCbigapp/Proto/order"
+	orderpb "gRPCbigapp/Proto/protoPB/orderPB"
 	"gRPCbigapp/Shared/Auth/AuthCTX"
+	"gRPCbigapp/Shared/ErrorInterceptor"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
+	"time"
 
-	"github.com/shopspring/decimal"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	moneyconverter "gRPCbigapp/Shared/Converters/Money"
 )
+
+// т.к outbox вырезал, а ломать всю логику не хочется - поставил вот такую затычку
+
+const poolInterval = 5 * time.Second
 
 type OrderHandler struct {
 	orderpb.UnimplementedOrderServiceServer
@@ -25,27 +30,45 @@ func NewOrderHandler(log LoggerPorts.Logger, osp OSPorts.OSInboundPort) *OrderHa
 	}
 }
 
+// сразу просматриваем статусы/конвертеры из pb.proto
+
+func pbProtoStatuses(status OSDomain.OrderStatus) orderpb.OrderStatus {
+	if val, ok := orderpb.OrderStatus_value[string(status)]; ok {
+		return orderpb.OrderStatus(val)
+	}
+	return orderpb.OrderStatus_UNREGISTERED_STATUS
+}
+
+func pbOrderConverter(convert *OSDomain.OrderDomain) *orderpb.Order {
+	return &orderpb.Order{
+		UserId:      convert.UserID,
+		OrderId:     convert.OrderID,
+		MarketId:    convert.MarketID,
+		Price:       moneyconverter.DecToMoney(convert.Price, moneyconverter.Currency),
+		Amount:      moneyconverter.DecimalToDecimalPB(convert.Amount),
+		OrderStatus: pbProtoStatuses(convert.OrderStatus),
+		CreatedAt:   convert.CreatedAt.Unix(),
+	}
+}
+
 func (o *OrderHandler) CreateOrder(ctx context.Context, req *orderpb.CreateOrderRequest) (*orderpb.CreateOrderResponse, error) {
 	user, ok := AuthCTX.GetUser(ctx)
 	if !ok {
 		return nil, ErrUnauthenticated
 	}
 
-	price, err := decimal.NewFromString(req.Price)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "incorrect price")
-	}
+	price := moneyconverter.MoneyToDec(req.GetPrice())
 
-	quantity, err := decimal.NewFromString(req.Quantity)
+	amount, err := moneyconverter.DecimalPBToDecimal(req.GetAmount())
 	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, "incorrect quantity")
+		return nil, ErrorInterceptor.NewError(ErrorInterceptor.Invalid, "Некорректная сумма заказа", err)
 	}
 
 	cmd := OSPorts.CreteOrder{
 		UserID:   user.UserID,
-		MarketID: req.MarketId,
+		MarketID: req.GetMarketId(),
 		Price:    price,
-		Quantity: quantity,
+		Quantity: amount,
 	}
 
 	orderID, err := o.useCase.CreteOrder(ctx, cmd)
@@ -53,10 +76,10 @@ func (o *OrderHandler) CreateOrder(ctx context.Context, req *orderpb.CreateOrder
 		o.logger.LogError("grpc, failed to crete order",
 			LoggerPorts.Field{Key: "id", Value: user.UserID},
 			LoggerPorts.Field{Key: "error", Value: err.Error()})
-		return nil, DomainErrorMapping(err)
+		return nil, err
 	}
 
-	return &orderpb.CreateOrderResponse{OrderId: orderID, OrderStatus: "Created"}, nil
+	return &orderpb.CreateOrderResponse{CreateOrderResponse: pbOrderConverter(orderID)}, nil
 }
 
 func (o *OrderHandler) GetOrderStatusByID(ctx context.Context, req *orderpb.OrderStatusByIDRequest) (*orderpb.OrderStatusByIDResponse, error) {
@@ -64,45 +87,90 @@ func (o *OrderHandler) GetOrderStatusByID(ctx context.Context, req *orderpb.Orde
 	if !ok {
 		return nil, ErrUnauthenticated
 	}
-	order, err := o.useCase.GetOrderByID(ctx, req.OrderId, user.UserID)
+	order, err := o.useCase.GetOrderByID(ctx, req.GetOrderId(), user.UserID)
 	if err != nil {
-		return nil, DomainErrorMapping(err)
+		return nil, err
 	}
 	return &orderpb.OrderStatusByIDResponse{
-		OrderId:     order.OrderID,
-		OrderStatus: string(order.OrderStatus),
+		OrderStatusResponse: pbOrderConverter(order),
 	}, nil
 }
 
 func (o *OrderHandler) GetAllOrderStatuses(ctx context.Context, req *orderpb.OrderStatusAllRequest) (*orderpb.OrderStatusAllResponse, error) {
-	size := int(req.PageSize)
-	if size <= 0 || size > 100 {
-		size = 20
-	}
-
-	curs := req.PageToken
-
 	user, ok := AuthCTX.GetUser(ctx)
 	if !ok {
 		return nil, ErrUnauthenticated
 	}
 
-	orders, nextPageToken, err := o.useCase.GetAllOrders(ctx, user.UserID, curs, size)
-	if err != nil {
-		return nil, DomainErrorMapping(err)
+	size := int(req.GetPageSize())
+	if size <= 0 || size > 100 {
+		size = 20
 	}
 
-	protoOrders := make([]*orderpb.OrderStatusStruct, 0, len(orders))
+	orders, nextPageToken, err := o.useCase.GetAllOrders(ctx, user.UserID, req.GetPageToken(), size)
+	if err != nil {
+		return nil, err
+	}
+
+	protoOrders := make([]*orderpb.Order, 0, len(orders))
 
 	for _, ord := range orders {
-		protoOrders = append(protoOrders, &orderpb.OrderStatusStruct{
-			OrderId: ord.OrderID,
-			Status:  string(ord.OrderStatus),
-		})
+		protoOrders = append(protoOrders, pbOrderConverter(ord))
 	}
 
 	return &orderpb.OrderStatusAllResponse{
-		Orders:        protoOrders,
-		NextPageToken: nextPageToken,
+		AllOrdersStatusesResponse: protoOrders,
+		NextPageToken:             nextPageToken,
 	}, nil
+}
+
+func (o *OrderHandler) StreamUpdateOrder(req *orderpb.StreamOrderRequest, stream orderpb.OrderService_StreamOrderUpdatesServer) error {
+	ctx := stream.Context()
+
+	user, ok := AuthCTX.GetUser(ctx)
+	if !ok {
+		return ErrUnauthenticated
+	}
+
+	orderID := req.GetOrderId()
+
+	var lastSend OSDomain.OrderStatus
+	firstSend := true
+
+	send := func() (terminal bool, err error) {
+		order, err := o.useCase.GetOrderByID(ctx, orderID, user.UserID)
+
+		if err != nil {
+			return false, ErrorInterceptor.GRPCConnector(err)
+		}
+
+		if firstSend || order.OrderStatus != lastSend {
+			if err := stream.Send(&orderpb.OrderStatusByIDResponse{
+				OrderStatusResponse: pbOrderConverter(order)}); err != nil {
+				// пока оставил так, позже буду мапить ошибки через отдельный обработчик
+				return false, err
+			}
+			lastSend = order.OrderStatus
+			firstSend = false
+		}
+		return order.OrderStatus.IsTerminal(), nil
+	}
+
+	if terminal, err := send(); err != nil || terminal {
+		return err
+	}
+
+	ticker := time.NewTicker(poolInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+			if terminal, err := send(); err != nil || terminal {
+				return err
+			}
+		}
+	}
 }

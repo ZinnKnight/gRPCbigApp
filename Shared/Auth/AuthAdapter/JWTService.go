@@ -1,6 +1,7 @@
 package AuthAdapter
 
 import (
+	"gRPCbigapp/Shared/Auth/AuthClaims"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -18,12 +19,20 @@ func NewJWTService(secretKey []byte, ttl time.Duration) *JWTService {
 	}
 }
 
+func (serv *JWTService) TTLinSeconds() int64 {
+	return int64(serv.ttl.Seconds())
+}
+
 func (serv *JWTService) GenerateToken(userID, userName, userPlan string) (string, error) {
-	claims := jwt.MapClaims{
-		"uid":       userID,
-		"user_name": userName,
-		"user_plan": userPlan,
-		"exp":       time.Now().Add(serv.ttl).Unix(),
+	timeStomp := time.Now()
+	claims := AuthClaims.Claims{
+		UserID:   userID,
+		UserName: userName,
+		UserPlan: userPlan,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(timeStomp.Add(serv.ttl)),
+			IssuedAt:  jwt.NewNumericDate(timeStomp),
+		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(serv.secretKey)

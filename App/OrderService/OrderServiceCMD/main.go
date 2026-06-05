@@ -3,181 +3,38 @@ package main
 import (
 	"context"
 	"fmt"
-	clientGRPC "gRPCbigapp/App/ClientService/Adapter/grpcAdapter"
-	clientPG "gRPCbigapp/App/ClientService/Adapter/postgresAdapter"
-	clientUC "gRPCbigapp/App/ClientService/CSUseCase"
-	orderPG "gRPCbigapp/App/OrderService/OSAdapters/OSPostgre"
-	orderGRPC "gRPCbigapp/App/OrderService/OSAdapters/grpcAdapter"
-	orderUC "gRPCbigapp/App/OrderService/OSUseCase"
-	orderPB "gRPCbigapp/Proto/Order"
-	clientPB "gRPCbigapp/Proto/client"
-	authAdapter "gRPCbigapp/Shared/Auth/AuthAdapter"
-	authInterceptor "gRPCbigapp/Shared/Auth/AuthInterceptor"
+	orderApp "gRPCbigapp/App/OrderService/OrderServiceApp"
 	"gRPCbigapp/Shared/Config"
-	logAdapter "gRPCbigapp/Shared/Logger/LoggerAdapter"
-	Metrics2 "gRPCbigapp/Shared/Metrics"
-	Outbox2 "gRPCbigapp/Shared/Outbox"
-	"gRPCbigapp/Shared/PanicInterceptor"
-	RateLimiter2 "gRPCbigapp/Shared/RateLimiter"
-	redisClient "gRPCbigapp/Shared/Redis"
-	tracing "gRPCbigapp/Shared/Tracing"
-	"gRPCbigapp/Shared/Txmanager"
-	"net"
+	"gRPCbigapp/Shared/Logger/LoggerAdapter"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
-
-	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"google.golang.org/grpc"
 )
 
-func main() {
-	const MaxConns = 20
-	const MinConns = 2
-
+func run() error {
 	cfg, err := Config.LoadConfig()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "config: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("load config: %v", err)
 	}
-
-	logger, err := logAdapter.NewZapLogger()
+	logger, err := LoggerAdapter.NewZapLogger()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "logger: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("new logger: %v", err)
 	}
 	defer logger.Sync()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	tracingShutDown, err := tracing.Init(ctx, tracing.Config{
-		Endpoint:       cfg.OpenTelemetryEndpoint,
-		ServiceName:    cfg.ServiceName,
-		ServiceVersion: cfg.ServiceVersion,
-		Environment:    cfg.Environment,
-		SampleRatio:    cfg.TracingSampleRatio,
-		Enabled:        cfg.TracingEnabled,
-		Logger:         logger,
-	})
+	application, err := orderApp.New(ctx, cfg, logger)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "tracing: %v", err)
-		os.Exit(1)
+		return err
 	}
-	defer func() {
-		shCTX, shCancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer shCancel()
-		if err := tracingShutDown(shCTX); err != nil {
-			fmt.Fprintf(os.Stderr, "tracing: %v\n", err)
-		}
-	}()
-
-	poolCFG, err := pgxpool.ParseConfig(cfg.DatabaseURL)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "pgxpool.ParseConfig: %v", err)
-		os.Exit(1)
-	}
-	poolCFG.MaxConns = MaxConns
-	poolCFG.MinConns = MinConns
-	poolCFG.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
-		pgxdecimal.Register(conn.TypeMap())
-		return nil
-	}
-
-	pool, err := pgxpool.NewWithConfig(ctx, poolCFG)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "pgxpool.New: %v", err)
-		os.Exit(1)
-	}
-	defer pool.Close()
-
-	if err := pool.Ping(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "pool.Ping: %v", err)
-		os.Exit(1)
-	}
-
-	rdb, err := redisClient.NewRedisClient(ctx, cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "redisClient.NewRedisClient: %v", err)
-		os.Exit(1)
-	}
-	defer rdb.Close()
-
-	txManag := Txmanager.NewTxManager(pool)
-	outboxRepo := Outbox2.NewRepository(pool)
-
-	orderRepo := orderPG.NewOrderRepo(pool)
-	orderUseCase := orderUC.NewOSUseCase(orderRepo, outboxRepo, txManag, logger)
-
-	clientRepo := clientPG.NewUserRepo(pool)
-	clientUseCase := clientUC.NewUserUseCase(clientRepo, outboxRepo, txManag, logger)
-
-	limiter := RateLimiter2.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
-
-	jwtService := authAdapter.NewJWTService([]byte(cfg.JWTSecretKey), 4*time.Hour)
-	orderHandler := orderGRPC.NewOrderHandler(logger, orderUseCase)
-	clientHandler := clientGRPC.NewUserhandler(clientUseCase, logger, jwtService)
-
-	grpcServer := grpc.NewServer(
-		grpc.StatsHandler(otelgrpc.NewServerHandler()),
-		grpc.ChainUnaryInterceptor(
-			PanicInterceptor.PanicRecoveryInterceptor(logger),
-			Metrics2.UnaryServerInterceptor(),
-			authInterceptor.AuthInterceptor([]byte(cfg.JWTSecretKey)),
-			RateLimiter2.UnaryServerInterceptor(limiter),
-		),
-	)
-
-	orderPB.RegisterOrderServiceServer(grpcServer, orderHandler)
-	clientPB.RegisterAuthServiceServer(grpcServer, clientHandler)
-
-	go func() {
-		if err := Metrics2.StartMetricsServer(ctx, cfg.MetricsPort); err != nil {
-			fmt.Fprintf(os.Stderr, "Metrics.StartMetricsServer: %v", err)
-		}
-	}()
-
-	relay := Outbox2.NewRelay(
-		outboxRepo,
-		&noopPublisher{},
-		logger,
-		time.Duration(cfg.OutBoxInterval)*time.Second,
-		cfg.OutBoxButchSize,
-	)
-	go relay.Start(ctx)
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCPort))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "net.Listen: %v", err)
-		os.Exit(1)
-	}
-
-	go func() {
-		sigCH := make(chan os.Signal, 1)
-		signal.Notify(sigCH, syscall.SIGINT, syscall.SIGTERM)
-		sig := <-sigCH
-		fmt.Printf("Received signal: %v, shutting down...\n", sig)
-
-		grpcServer.GracefulStop()
-		cancel()
-	}()
-
-	fmt.Printf("order-service listening on grpc=:%d metrics=:%d\n", cfg.GRPCPort, cfg.MetricsPort)
-	if err := grpcServer.Serve(lis); err != nil {
-		fmt.Fprintf(os.Stderr, "grpcServer.Serve: %v", err)
-		os.Exit(1)
-	}
+	return application.Run(ctx)
 }
 
-// MOCK for kafka or smth like that
-
-type noopPublisher struct{}
-
-func (p *noopPublisher) Publish(_ context.Context, event *Outbox2.Event) error {
-	fmt.Printf("[noop-publisher] event_type=%s aggregate_id=%s\n", event.EventType, event.AggregatorID)
-	return nil
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintln(os.Stderr, "order-service: %v/n", err)
+		os.Exit(1)
+	}
 }

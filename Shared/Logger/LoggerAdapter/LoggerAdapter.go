@@ -6,11 +6,13 @@ import (
 	"go.uber.org/zap"
 )
 
+var _ LoggerPorts.Logger = (*ZapLogger)(nil)
+
 type ZapLogger struct {
 	log *zap.Logger
 }
 
-func NewZapLogger() (*ZapLogger, error) {
+func NewZapLogger() (LoggerPorts.Logger, error) {
 	l, err := zap.NewProduction()
 	if err != nil {
 		return nil, err // Not sure can i log a process of making a logger?

@@ -3,141 +3,39 @@ package main
 import (
 	"context"
 	"fmt"
-	authInterceptor "gRPCbigapp/Shared/Auth/AuthInterceptor"
+	marketapp "gRPCbigapp/App/SpotInstrumentService/SpotInstrumentServiceApp"
 	"gRPCbigapp/Shared/Config"
-	logAdapter "gRPCbigapp/Shared/Logger/LoggerAdapter"
-	"gRPCbigapp/Shared/Logger/LoggerPorts"
-	Metrics2 "gRPCbigapp/Shared/Metrics"
-	"gRPCbigapp/Shared/PanicInterceptor"
-	RateLimiter2 "gRPCbigapp/Shared/RateLimiter"
-	redisClient "gRPCbigapp/Shared/Redis"
-	tracing "gRPCbigapp/Shared/Tracing"
-	"net"
+	"gRPCbigapp/Shared/Logger/LoggerAdapter"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
-
-	marketPG "gRPCbigapp/App/SpotInstrumentService/Adapters/Postgres"
-	marketGRPC "gRPCbigapp/App/SpotInstrumentService/Adapters/SISgrpcAdapter"
-	marketUC "gRPCbigapp/App/SpotInstrumentService/SISUseCase"
-	marketPB "gRPCbigapp/Proto/market"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"google.golang.org/grpc"
 )
 
 func main() {
-	cfg, err := Config.LoadConfig()
-	if err != nil {
-		// Probably should do a panic, Tuzov do it his yt vid ab grpc, but idk what is propper way for "real-prod" way
-		fmt.Println("Error loading config: %w", err)
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "market service: %v\n", err)
 		os.Exit(1)
 	}
+}
 
-	//If there will be decimals types - copy + stelise logic for it from orders service
-
-	logger, err := logAdapter.NewZapLogger()
+func run() error {
+	cfg, err := Config.LoadConfig()
 	if err != nil {
-		fmt.Println("Error initializing logger: %w", err)
-		os.Exit(1)
+		return fmt.Errorf("load config: %w", err)
+	}
+	logger, err := LoggerAdapter.NewZapLogger()
+	if err != nil {
+		return fmt.Errorf("create logger: %w", err)
 	}
 	defer logger.Sync()
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	tracingShutDown, err := tracing.Init(ctx, tracing.Config{
-		Endpoint:       cfg.OpenTelemetryEndpoint,
-		ServiceName:    cfg.ServiceName,
-		ServiceVersion: cfg.ServiceVersion,
-		Environment:    cfg.Environment,
-		SampleRatio:    cfg.TracingSampleRatio,
-		Enabled:        cfg.TracingEnabled,
-		Logger:         logger,
-	})
+	applications, err := marketapp.New(ctx, cfg, logger)
 	if err != nil {
-		logger.LogError("tracing init failed", LoggerPorts.Field{Key: "error", Value: err.Error()})
-		os.Exit(1)
-	}
-	defer func() {
-		shCTX, shCancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer shCancel()
-		if err := tracingShutDown(shCTX); err != nil {
-			fmt.Fprintln(os.Stderr, "Error shutting down tracing: %w", err)
-		}
-	}()
-
-	//Example if will add numeric stuff like decimal in market service too
-	//
-	//poolCFG, err := pgxpool.ParseConfig(cfg.DatabaseURl)
-	//if err != nil { ... }
-	//poolCFG.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
-	//    pgxdecimal.Register(conn.TypeMap())
-	//    return nil
-	//}
-	//pool, err := pgxpool.NewWithConfig(ctx, poolCFG)
-
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
-	if err != nil {
-		fmt.Println("Error initializing postgres pool: %w", err)
-		os.Exit(1)
-	}
-	defer pool.Close()
-
-	if err := pool.Ping(ctx); err != nil {
-		fmt.Println("Error pinging postgres pool: %w", err)
-		os.Exit(1)
+		return err
 	}
 
-	rdb, err := redisClient.NewRedisClient(ctx, cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
-	if err != nil {
-		fmt.Println("Error initializing redis client: %w", err)
-		os.Exit(1)
-	}
-	defer rdb.Close()
-
-	marketRepo := marketPG.NewSISMarketRepo(pool)
-	marketUseCase := marketUC.NewSISUseCase(marketRepo, logger)
-	marketHandler := marketGRPC.NewSISgrpcHandler(marketUseCase, logger)
-
-	limiter := RateLimiter2.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
-
-	grpcServer := grpc.NewServer(
-		grpc.StatsHandler(otelgrpc.NewServerHandler()),
-		grpc.ChainUnaryInterceptor(
-			PanicInterceptor.PanicRecoveryInterceptor(logger),
-			Metrics2.UnaryServerInterceptor(),
-			authInterceptor.AuthInterceptor([]byte(cfg.JWTSecretKey)),
-			RateLimiter2.UnaryServerInterceptor(limiter),
-		),
-	)
-	marketPB.RegisterSpotInstrumentServiceServer(grpcServer, marketHandler)
-
-	go func() {
-		if err := Metrics2.StartMetricsServer(ctx, cfg.MetricsPort); err != nil {
-			fmt.Println("Error starting metrics server: %w", err)
-		}
-	}()
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCPort))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to listen: %v", err)
-		os.Exit(1)
-	}
-
-	go func() {
-		sigCH := make(chan os.Signal, 1)
-		signal.Notify(sigCH, syscall.SIGINT, syscall.SIGTERM)
-		<-sigCH
-		grpcServer.GracefulStop()
-		cancel()
-	}()
-
-	fmt.Printf("market server listening on grpc =: %d, metrics = :%d\n", cfg.GRPCPort, cfg.MetricsPort)
-	if err := grpcServer.Serve(lis); err != nil {
-		fmt.Fprintf(os.Stderr, "failed to serve: %v", err)
-		os.Exit(1)
-	}
+	return applications.Run(ctx)
 }

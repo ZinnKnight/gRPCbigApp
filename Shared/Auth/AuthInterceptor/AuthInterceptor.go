@@ -3,6 +3,7 @@ package AuthInterceptor
 import (
 	"context"
 	"gRPCbigapp/Shared/Auth/AuthCTX"
+	"gRPCbigapp/Shared/Auth/AuthClaims"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -12,9 +13,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const (
+	registration = "/auth.AuthService/UserRegistration"
+	login        = "/auth.AuthService/UserLogin"
+	pref         = "bearer "
+)
+
 var publicMethods = map[string]bool{
-	"/auth.AuthService/UserRegistration": true,
-	"/auth.AuthService/UserLogin":        true,
+	registration: true,
+	login:        true,
 }
 
 func AuthInterceptor(jwtSecretKey []byte) grpc.UnaryServerInterceptor {
@@ -26,6 +33,7 @@ func AuthInterceptor(jwtSecretKey []byte) grpc.UnaryServerInterceptor {
 		if publicMethods[info.FullMethod] {
 			return handler(ctx, req)
 		}
+
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
 			return nil, status.Errorf(codes.Unauthenticated, "metadata is not provided")
@@ -34,37 +42,35 @@ func AuthInterceptor(jwtSecretKey []byte) grpc.UnaryServerInterceptor {
 		if len(authHeaders) == 0 {
 			return nil, status.Errorf(codes.Unauthenticated, "missing authorization header")
 		}
+		rawToken := authHeaders[0]
+		if len(rawToken) < len(pref) || strings.EqualFold(rawToken[:len(pref)], pref) {
+			return nil, status.Errorf(codes.Unauthenticated, "authorization supposed use a Bearer schema")
+		}
+		tokenStr := strings.TrimSpace(rawToken[len(pref):])
 
-		tokenStr := strings.TrimPrefix(authHeaders[0], "Bearer ")
-
-		token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
+		claims := &AuthClaims.Claims{}
+		_, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, status.Error(codes.Unauthenticated, "unexpected signing method")
+			}
 			return jwtSecretKey, nil
+		},
+			jwt.WithValidMethods([]string{"HS256"}),
+			jwt.WithExpirationRequired(),
+		)
+		if err != nil {
+			return nil, status.Error(codes.Unauthenticated, "invalid auth token")
+		}
+
+		if claims.UserID == "" || claims.UserName == "" || claims.UserPlan == "" {
+			return nil, status.Error(codes.Unauthenticated, "incomplete claims invalid auth token")
+		}
+
+		ctx = AuthCTX.PutUser(ctx, &AuthCTX.UserAuth{
+			UserID:   claims.UserID,
+			UserName: claims.UserName,
+			UserPlan: claims.UserPlan,
 		})
-		if err != nil || !token.Valid {
-			return nil, status.Errorf(codes.Unauthenticated, "token is not valid")
-		}
-
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if !ok {
-			return nil, status.Errorf(codes.Unauthenticated, "token claims not valid")
-		}
-		user := &AuthCTX.UserAuth{
-			UserID:   claimsToString(claims, "user_id"),
-			UserName: claimsToString(claims, "user_name"),
-			UserPlan: claimsToString(claims, "user_plan"),
-		}
-		if user.UserID == "" || user.UserName == "" || user.UserPlan == "" {
-			return nil, status.Errorf(codes.Unauthenticated, "invalid user id/user name/plan")
-		}
-		ctx = AuthCTX.PutUser(ctx, user)
-
 		return handler(ctx, req)
 	}
-}
-
-func claimsToString(claims jwt.MapClaims, key string) string {
-	if val, ok := claims[key].(string); ok {
-		return val
-	}
-	return ""
 }

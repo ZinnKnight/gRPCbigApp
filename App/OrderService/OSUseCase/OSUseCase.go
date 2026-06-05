@@ -6,10 +6,9 @@ import (
 	"fmt"
 	"gRPCbigapp/App/OrderService/OSDomain"
 	"gRPCbigapp/App/OrderService/OSPorts"
+	"gRPCbigapp/Shared/EventActionMockOfOutbox"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
-	Outbox2 "gRPCbigapp/Shared/Outbox"
 	"gRPCbigapp/Shared/Txmanager"
-	"time"
 
 	tracing "gRPCbigapp/Shared/Tracing"
 
@@ -26,21 +25,24 @@ var _ OSPorts.OSInboundPort = (*OSUseCase)(nil)
 
 type OSUseCase struct {
 	repo      OSPorts.OSOutboundPorts
-	outbox    *Outbox2.Repository
+	events    EventActionMockOfOutbox.Emmiter
 	txManager *Txmanager.TxManager
 	logger    LoggerPorts.Logger
 }
 
-func NewOSUseCase(repo OSPorts.OSOutboundPorts, outbox *Outbox2.Repository, txManager *Txmanager.TxManager, logger LoggerPorts.Logger) *OSUseCase {
+func NewOSUseCase(repo OSPorts.OSOutboundPorts,
+	event EventActionMockOfOutbox.Emmiter,
+	txManager *Txmanager.TxManager,
+	logger LoggerPorts.Logger) *OSUseCase {
 	return &OSUseCase{
 		repo:      repo,
-		outbox:    outbox,
+		events:    event,
 		txManager: txManager,
 		logger:    logger,
 	}
 }
 
-func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (string, error) {
+func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (*OSDomain.OrderDomain, error) {
 
 	ctx, span := tracer.Start(ctx, "usecase.CreteOrder", tracing.KindInternal)
 	defer span.End()
@@ -54,7 +56,7 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "domain validation")
-		return "", fmt.Errorf("usecase, fail in creating order: %w", err)
+		return nil, fmt.Errorf("usecase, fail in creating order: %w", err)
 	}
 	span.SetAttributes(attribute.String("order.id", order.OrderID))
 
@@ -67,24 +69,22 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 		"status":    string(order.OrderStatus),
 	})
 	if err != nil {
-		return "", fmt.Errorf("usecase, fail in marshaling order: %w", err)
+		return nil, fmt.Errorf("usecase, fail in marshaling order: %w", err)
 	}
 
-	event := &Outbox2.Event{
-		AggregatorType: "order",
-		AggregatorID:   order.OrderID,
+	event := EventActionMockOfOutbox.Event{
+		AggregateType:  "order",
+		AggregateID:    order.OrderID,
 		EventType:      "OrderCreated",
-		Payload:        payload,
+		PayLoad:        payload,
 		IdempotencyKey: uuid.New().String(),
-		CreatedAt:      time.Now(),
-		TraceContext:   tracing.PlaceIntoCar(ctx),
 	}
 
 	err = osu.txManager.Do(ctx, func(ctx context.Context) error {
 		if err := osu.repo.SaveOrder(ctx, order); err != nil {
 			return fmt.Errorf("usecase, fail in saving order: %w", err)
 		}
-		if err := osu.outbox.SaveEvent(ctx, event); err != nil {
+		if err := osu.events.Emit(ctx, event); err != nil {
 			return fmt.Errorf("usecase, fail in saving event: %w", err)
 		}
 		return nil
@@ -94,7 +94,7 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 			LoggerPorts.Field{Key: "user_id", Value: order.UserID},
 			LoggerPorts.Field{Key: "error", Value: err.Error()},
 		)
-		return "", fmt.Errorf("usecase, creating order: %w", err)
+		return nil, fmt.Errorf("usecase, creating order: %w", err)
 	}
 
 	osu.logger.LogInfo("order creted",
@@ -102,7 +102,7 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd OSPorts.CreteOrder) (s
 		LoggerPorts.Field{Key: "order_id", Value: order.OrderID},
 	)
 
-	return order.OrderID, nil
+	return order, nil
 }
 
 func (osu *OSUseCase) GetOrderByID(ctx context.Context, orderID, userID string) (*OSDomain.OrderDomain, error) {

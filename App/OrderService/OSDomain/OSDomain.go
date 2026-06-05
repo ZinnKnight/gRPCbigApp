@@ -20,24 +20,29 @@ type OrderDomain struct {
 
 type OrderStatus string
 
-// Add StatusRejected for more clarity with StatusCanceled
 const (
-	StatusCreated   OrderStatus = "Order created"
-	StatusCancelled OrderStatus = "Order cancelled"
-	StatusPrepared  OrderStatus = "Order prepared"
-	StutusRejected  OrderStatus = "Order rejected"
+	StatusUnregistered OrderStatus = "UNREGISTERED_STATUS"
+	StatusCreated      OrderStatus = "ORDER_CREATED"
+	StatusReserved     OrderStatus = "ORDER_RESERVED"
+	StatusRejected     OrderStatus = "ORDER_REJECTED"
+	StatusOrderDone    OrderStatus = "ORDER_DONE"
+	StatusInDelivery   OrderStatus = "ORDER_IN_DELIVERY"
 )
 
+func (s OrderStatus) IsTerminal() bool {
+	return s == StatusOrderDone || s == StatusRejected
+}
+
 var (
-	ErrOrderNotFound   = errors.New("order not found")
-	ErrInvalidPrice    = errors.New("invalid price")
-	ErrInvalidAmount   = errors.New("invalid amount")
-	ErrInvalidMarketID = errors.New("invalid order id")
-	ErrInvalidUserID   = errors.New("invalid order id")
+	ErrOrderNotFound      = errors.New("order not found")
+	ErrInvalidPrice       = errors.New("invalid price")
+	ErrInvalidAmount      = errors.New("invalid amount")
+	ErrInvalidMarketID    = errors.New("invalid order id")
+	ErrInvalidUserID      = errors.New("invalid user id")
+	ErrOrderAlreadyExists = errors.New("order already exists")
 )
 
 func NewOrder(userID, marketID string, price, amount decimal.Decimal) (*OrderDomain, error) {
-	// Probably switch better, not 100% sure for growth
 	if userID == "" {
 		return nil, ErrInvalidUserID
 	}

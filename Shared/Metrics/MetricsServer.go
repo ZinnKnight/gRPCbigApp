@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func StartMetricsServer(ctx context.Context, port int) error {
+func StartMetricsServer(ctx context.Context, port int, handler http.Handler) error {
 	mux := http.NewServeMux()
 
-	mux.Handle("/metrics", promhttp.Handler())
+	mux.Handle("/metrics", handler)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
