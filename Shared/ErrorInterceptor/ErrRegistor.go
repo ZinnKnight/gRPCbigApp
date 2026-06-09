@@ -2,8 +2,8 @@ package ErrorInterceptor
 
 import (
 	"gRPCbigapp/App/ClientService/Domain"
-	"gRPCbigapp/App/OrderService/OSDomain"
-	"gRPCbigapp/App/SpotInstrumentService/SISDomain"
+	"gRPCbigapp/App/OrderService/Domain"
+	"gRPCbigapp/App/SpotInstrumentService/Domain"
 )
 
 func init() {
@@ -13,12 +13,12 @@ func init() {
 	RegisterError(Domain.ErrUserNotFound, NotFound, "Такого пользователя не существует")
 	RegisterError(Domain.ErrUserAlreadyExists, AlreadyExists, "Такой пользователь уже существует")
 
-	RegisterError(OSDomain.ErrOrderNotFound, NotFound, "Такого заказа не существует")
-	RegisterError(OSDomain.ErrInvalidUserID, Invalid, "Некорректный идентификатор пользователя")
-	RegisterError(OSDomain.ErrInvalidMarketID, Invalid, "Некорректный идентификатор магазина")
-	RegisterError(OSDomain.ErrInvalidPrice, Invalid, "Некорректная цена заказа")
-	RegisterError(OSDomain.ErrInvalidAmount, Invalid, "Некорректное количество в заказе")
-	RegisterError(OSDomain.ErrOrderAlreadyExists, AlreadyExists, "Заказ уже существует")
+	RegisterError(Domain.ErrOrderNotFound, NotFound, "Такого заказа не существует")
+	RegisterError(Domain.ErrInvalidUserID, Invalid, "Некорректный идентификатор пользователя")
+	RegisterError(Domain.ErrInvalidMarketID, Invalid, "Некорректный идентификатор магазина")
+	RegisterError(Domain.ErrInvalidPrice, Invalid, "Некорректная цена заказа")
+	RegisterError(Domain.ErrInvalidAmount, Invalid, "Некорректное количество в заказе")
+	RegisterError(Domain.ErrOrderAlreadyExists, AlreadyExists, "Заказ уже существует")
 
-	RegisterError(SISDomain.ErrMarketNotFound, NotFound, "Невозможно найти такой магазин")
+	RegisterError(Domain.ErrMarketNotFound, NotFound, "Невозможно найти такой магазин")
 }
