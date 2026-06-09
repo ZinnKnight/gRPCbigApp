@@ -8,7 +8,7 @@ import (
 	clientUC "gRPCbigapp/App/ClientService/UseCase"
 	orderPG "gRPCbigapp/App/OrderService/Adapters/Postgres"
 	orderGRPC "gRPCbigapp/App/OrderService/Adapters/grpcAdapter"
-	orderUC "gRPCbigapp/App/OrderService/OSUseCase"
+	orderUC "gRPCbigapp/App/OrderService/UseCase"
 	"gRPCbigapp/Proto/protoPB"
 	authAdapter "gRPCbigapp/Shared/Auth/AuthAdapter"
 	authInterceptor "gRPCbigapp/Shared/Auth/AuthInterceptor"
