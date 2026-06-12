@@ -14,7 +14,6 @@ import (
 
 var tracer = tracing.Tracer("ratelimiter.redis")
 
-// скрипт для редиса стянул с инета
 var slidingWindowScript = redis.NewScript(
 	`local now = tonumber(ARGV[1])
 local window = tonumber(ARGV[2])
