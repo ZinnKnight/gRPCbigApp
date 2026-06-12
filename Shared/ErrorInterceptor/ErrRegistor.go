@@ -1,24 +1,24 @@
 package ErrorInterceptor
 
 import (
-	"gRPCbigapp/App/ClientService/Domain"
-	"gRPCbigapp/App/OrderService/Domain"
-	"gRPCbigapp/App/SpotInstrumentService/Domain"
+	clientErr "gRPCbigapp/App/ClientService/Domain"
+	orderErr "gRPCbigapp/App/OrderService/Domain"
+	spotIntsrumentErr "gRPCbigapp/App/SpotInstrumentService/Domain"
 )
 
 func init() {
-	RegisterError(Domain.ErrIncorrectCredentials, Unauthenticated, "Некорректный логин или пароль")
-	RegisterError(Domain.ErrEmptyName, Invalid, "Имя пользователя не может быть пустым")
-	RegisterError(Domain.ErrEmptyPassword, Invalid, "Пароль не может быть пустым")
-	RegisterError(Domain.ErrUserNotFound, NotFound, "Такого пользователя не существует")
-	RegisterError(Domain.ErrUserAlreadyExists, AlreadyExists, "Такой пользователь уже существует")
+	RegisterError(clientErr.ErrIncorrectCredentials, Unauthenticated, "Некорректный логин или пароль")
+	RegisterError(clientErr.ErrEmptyName, Invalid, "Имя пользователя не может быть пустым")
+	RegisterError(clientErr.ErrEmptyPassword, Invalid, "Пароль не может быть пустым")
+	RegisterError(clientErr.ErrUserNotFound, NotFound, "Такого пользователя не существует")
+	RegisterError(clientErr.ErrUserAlreadyExists, AlreadyExists, "Такой пользователь уже существует")
 
-	RegisterError(Domain.ErrOrderNotFound, NotFound, "Такого заказа не существует")
-	RegisterError(Domain.ErrInvalidUserID, Invalid, "Некорректный идентификатор пользователя")
-	RegisterError(Domain.ErrInvalidMarketID, Invalid, "Некорректный идентификатор магазина")
-	RegisterError(Domain.ErrInvalidPrice, Invalid, "Некорректная цена заказа")
-	RegisterError(Domain.ErrInvalidAmount, Invalid, "Некорректное количество в заказе")
-	RegisterError(Domain.ErrOrderAlreadyExists, AlreadyExists, "Заказ уже существует")
+	RegisterError(orderErr.ErrOrderNotFound, NotFound, "Такого заказа не существует")
+	RegisterError(orderErr.ErrInvalidUserID, Invalid, "Некорректный идентификатор пользователя")
+	RegisterError(orderErr.ErrInvalidMarketID, Invalid, "Некорректный идентификатор магазина")
+	RegisterError(orderErr.ErrInvalidPrice, Invalid, "Некорректная цена заказа")
+	RegisterError(orderErr.ErrInvalidAmount, Invalid, "Некорректное количество в заказе")
+	RegisterError(orderErr.ErrOrderAlreadyExists, AlreadyExists, "Заказ уже существует")
 
-	RegisterError(Domain.ErrMarketNotFound, NotFound, "Невозможно найти такой магазин")
+	RegisterError(spotIntsrumentErr.ErrMarketNotFound, NotFound, "Невозможно найти такой магазин")
 }

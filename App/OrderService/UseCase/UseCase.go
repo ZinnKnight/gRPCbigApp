@@ -42,7 +42,7 @@ func NewOSUseCase(repo Ports.OSOutboundPorts,
 	}
 }
 
-func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd Ports.CreteOrder) (*Domain.OrderDomain, error) {
+func (osu *OSUseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*Domain.OrderDomain, error) {
 
 	ctx, span := tracer.Start(ctx, "usecase.CreteOrder", tracing.KindInternal)
 	defer span.End()
@@ -105,7 +105,7 @@ func (osu *OSUseCase) CreteOrder(ctx context.Context, cmd Ports.CreteOrder) (*Do
 	return order, nil
 }
 
-func (osu *OSUseCase) GetOrderByID(ctx context.Context, orderID, userID string) (*Domain.OrderDomain, error) {
+func (osu *OSUseCase) GetOrderStatusByID(ctx context.Context, orderID, userID string) (*Domain.OrderDomain, error) {
 	ctx, span := tracer.Start(ctx, "usecase.GetOrderByID", tracing.KindInternal)
 	defer span.End()
 
@@ -120,7 +120,7 @@ func (osu *OSUseCase) GetOrderByID(ctx context.Context, orderID, userID string) 
 	return order, nil
 }
 
-func (osu *OSUseCase) GetAllOrders(ctx context.Context, userID, pageToken string, pageSize int) ([]*Domain.OrderDomain, string, error) {
+func (osu *OSUseCase) GetOrderStatusAll(ctx context.Context, userID, pageToken string, pageSize int) ([]*Domain.OrderDomain, string, error) {
 	ctx, span := tracer.Start(ctx, "usecase.GetAllOrders", tracing.KindInternal)
 	defer span.End()
 

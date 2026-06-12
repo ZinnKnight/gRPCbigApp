@@ -96,7 +96,7 @@ func (rc *UserRepo) UpdateUserPlan(ctx context.Context, userID string, userPlan 
 
 	span.SetAttributes(tracing.PostgresDB(query)...)
 
-	_, err := rc.connection(ctx).Exec(ctx, query, userID, string(userPlan))
+	_, err := rc.connection(ctx).Exec(ctx, query, string(userPlan), userID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "db.UpdateUserPlan failed")

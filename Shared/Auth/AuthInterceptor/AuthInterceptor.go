@@ -43,7 +43,7 @@ func AuthInterceptor(jwtSecretKey []byte) grpc.UnaryServerInterceptor {
 			return nil, status.Errorf(codes.Unauthenticated, "missing authorization header")
 		}
 		rawToken := authHeaders[0]
-		if len(rawToken) < len(pref) || strings.EqualFold(rawToken[:len(pref)], pref) {
+		if len(rawToken) < len(pref) || !strings.EqualFold(rawToken[:len(pref)], pref) {
 			return nil, status.Errorf(codes.Unauthenticated, "authorization supposed use a Bearer schema")
 		}
 		tokenStr := strings.TrimSpace(rawToken[len(pref):])

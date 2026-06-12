@@ -38,7 +38,7 @@ func NewUserUseCase(repo Ports.CSOutboundPorts, event EventActionMockOfOutbox.Em
 	}
 }
 
-func (us *UserUseCase) RegisterUser(ctx context.Context, rui Ports.RegisterUserInput) (*Domain.User, error) {
+func (us *UserUseCase) UserRegistration(ctx context.Context, rui Ports.RegisterUserInput) (*Domain.User, error) {
 
 	ctx, span := csUseCaseTrace.Start(ctx, "RegisterUser", tracing.KindInternal)
 	defer span.End()
@@ -105,7 +105,7 @@ func (us *UserUseCase) RegisterUser(ctx context.Context, rui Ports.RegisterUserI
 	return user, nil
 }
 
-func (us *UserUseCase) LoginUser(ctx context.Context, userName, userPassword string) (*Domain.User, error) {
+func (us *UserUseCase) UserLogin(ctx context.Context, userName, userPassword string) (*Domain.User, error) {
 
 	ctx, span := csUseCaseTrace.Start(ctx, "LoginUser", tracing.KindInternal)
 	defer span.End()
@@ -125,7 +125,7 @@ func (us *UserUseCase) LoginUser(ctx context.Context, userName, userPassword str
 	return user, nil
 }
 
-func (us *UserUseCase) ChangeUserPlan(ctx context.Context, userName string, newPlan Domain.UserPlan) (*Domain.User, error) {
+func (us *UserUseCase) PlanChange(ctx context.Context, userName string, newPlan Domain.UserPlan) (*Domain.User, error) {
 
 	ctx, span := csUseCaseTrace.Start(ctx, "ChangeUserPlan", tracing.KindInternal)
 	defer span.End()

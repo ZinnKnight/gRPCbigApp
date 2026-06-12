@@ -51,7 +51,7 @@ func (uh *UserHandler) UserRegistration(ctx context.Context, req *protoPB.Regist
 		UserPassword: req.GetUserPassword(),
 	}
 
-	user, err := uh.useCase.RegisterUser(ctx, rui)
+	user, err := uh.useCase.UserRegistration(ctx, rui)
 	if err != nil {
 		uh.logger.LogError("grpc, failed to register user",
 			LoggerPorts.Field{Key: "error", Value: err.Error()})
@@ -66,7 +66,7 @@ func (uh *UserHandler) UserRegistration(ctx context.Context, req *protoPB.Regist
 }
 
 func (uh *UserHandler) UserLogin(ctx context.Context, req *protoPB.LoginRequest) (*protoPB.AuthResponse, error) {
-	user, err := uh.useCase.LoginUser(ctx, req.UserName, req.GetUserPassword())
+	user, err := uh.useCase.UserLogin(ctx, req.UserName, req.GetUserPassword())
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (uh *UserHandler) UserLogin(ctx context.Context, req *protoPB.LoginRequest)
 	return &protoPB.AuthResponse{Token: token, TokenTtl: uh.jwt.TTLinSeconds()}, nil
 }
 
-func (uh *UserHandler) ChangeUserPlan(ctx context.Context, req *protoPB.PlanChangeRequest) (*protoPB.PlanChangeResponse, error) {
+func (uh *UserHandler) PlanChange(ctx context.Context, req *protoPB.PlanChangeRequest) (*protoPB.PlanChangeResponse, error) {
 	target, ok := AuthCTX.GetUser(ctx)
 	if !ok {
 		return nil, ErrorInterceptor.NewError(ErrorInterceptor.Unauthenticated, "Требуется авторизация", nil)
@@ -89,7 +89,7 @@ func (uh *UserHandler) ChangeUserPlan(ctx context.Context, req *protoPB.PlanChan
 
 	newPlan := roleToUser(req.GetUserRole())
 
-	user, err := uh.useCase.ChangeUserPlan(ctx, target.UserName, newPlan)
+	user, err := uh.useCase.PlanChange(ctx, target.UserName, newPlan)
 	if err != nil {
 		return nil, err
 	}

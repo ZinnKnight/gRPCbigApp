@@ -25,7 +25,7 @@ func NewSISUseCase(repo Ports.SISOutboundRepo, logger LoggerPorts.Logger) *SISUs
 	return &SISUseCase{repo: repo, logger: logger}
 }
 
-func (sis *SISUseCase) GetMarketByName(ctx context.Context, marketName string) (*Domain.MarketDomain, error) {
+func (sis *SISUseCase) ViewMarketsByID(ctx context.Context, marketName string) (*Domain.MarketDomain, error) {
 
 	ctx, span := trace.Start(ctx, "GetMarketByID", tracing.KindClient)
 	defer span.End()
@@ -41,7 +41,7 @@ func (sis *SISUseCase) GetMarketByName(ctx context.Context, marketName string) (
 	return market, nil
 }
 
-func (sis *SISUseCase) GetAllMarkets(ctx context.Context, pageSize int, curs string) ([]*Domain.MarketDomain, string, error) {
+func (sis *SISUseCase) ViewMarketsAll(ctx context.Context, pageSize int, curs string) ([]*Domain.MarketDomain, string, error) {
 
 	ctx, span := trace.Start(ctx, "GetAllMarkets", tracing.KindClient)
 	defer span.End()

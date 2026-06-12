@@ -8,9 +8,9 @@ import (
 )
 
 type OSInboundPort interface {
-	CreteOrder(ctx context.Context, cmd CreteOrder) (*Domain.OrderDomain, error)
-	GetOrderByID(ctx context.Context, orderID, UserID string) (*Domain.OrderDomain, error)
-	GetAllOrders(ctx context.Context, userID, pageToken string, pageSize int) ([]*Domain.OrderDomain, string, error)
+	CreateOrder(ctx context.Context, cmd CreteOrder) (*Domain.OrderDomain, error)
+	GetOrderStatusByID(ctx context.Context, orderID, UserID string) (*Domain.OrderDomain, error)
+	GetOrderStatusAll(ctx context.Context, userID, pageToken string, pageSize int) ([]*Domain.OrderDomain, string, error)
 }
 
 type CreteOrder struct {

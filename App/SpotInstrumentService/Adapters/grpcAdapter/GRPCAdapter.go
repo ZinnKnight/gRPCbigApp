@@ -38,8 +38,8 @@ func protoMarketMapper(m *Domain.MarketDomain) *protoPB.Market {
 
 }
 
-func (h *SISgrpcHandler) ViewMarketByID(ctx context.Context, req *protoPB.ViewMarketRequest) (*protoPB.ViewMarketResponse, error) {
-	market, err := h.useCase.GetMarketByName(ctx, req.GetViewMarketRequest())
+func (h *SISgrpcHandler) ViewMarketsByID(ctx context.Context, req *protoPB.ViewMarketRequest) (*protoPB.ViewMarketResponse, error) {
+	market, err := h.useCase.ViewMarketsByID(ctx, req.GetViewMarketRequest())
 	if err != nil {
 		h.logger.LogError("sisgrpcAdapter, failed to view a market by id",
 			LoggerPorts.Field{Key: "name", Value: req.GetViewMarketRequest()},
@@ -57,7 +57,7 @@ func (h *SISgrpcHandler) ViewAllMarkets(ctx context.Context, req *protoPB.ViewMa
 		size = 10
 	}
 
-	markets, nextCurs, err := h.useCase.GetAllMarkets(ctx, size, req.GetPageToken())
+	markets, nextCurs, err := h.useCase.ViewMarketsAll(ctx, size, req.GetPageToken())
 	if err != nil {
 		h.logger.LogError("sisgrpcAdapter, failed to view all markets",
 			LoggerPorts.Field{Key: "error", Value: err.Error()},

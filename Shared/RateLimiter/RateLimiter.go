@@ -33,7 +33,7 @@ end
 local oldest = redis.call("ZRANGE", KEYS[1], 0, 0, 'WITHSCORES')
 local retry = 0
 if oldest[2] then
-retry = (tonumber(oldest[2] + window) - now
+retry = (tonumber(oldest[2]) + window) - now
 if retry < 0 then retry = 0 end 
 end 
 return {0, 0, retry}

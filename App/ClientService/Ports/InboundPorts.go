@@ -11,7 +11,7 @@ type RegisterUserInput struct {
 }
 
 type UserInboundPort interface {
-	RegisterUser(ctx context.Context, input RegisterUserInput) (*Domain.User, error)
-	LoginUser(ctx context.Context, userName, UserPassword string) (*Domain.User, error)
-	ChangeUserPlan(ctx context.Context, userName string, newPlan Domain.UserPlan) (*Domain.User, error)
+	UserRegistration(ctx context.Context, input RegisterUserInput) (*Domain.User, error)
+	UserLogin(ctx context.Context, userName, UserPassword string) (*Domain.User, error)
+	PlanChange(ctx context.Context, userName string, newPlan Domain.UserPlan) (*Domain.User, error)
 }
