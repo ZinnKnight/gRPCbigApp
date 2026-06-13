@@ -37,7 +37,7 @@ func NewPool(ctx context.Context, config Config) (*pgxpool.Pool, error) {
 		poolConfig.MaxConnLifetime = config.MaxConnTTL
 	}
 	if config.DBMaxConnIdTTL > 0 {
-		poolConfig.MaxConnLifetime = config.DBMaxConnIdTTL
+		poolConfig.MaxConnIdleTime = config.DBMaxConnIdTTL
 	}
 	if config.AfterConn != nil {
 		poolConfig.AfterConnect = config.AfterConn

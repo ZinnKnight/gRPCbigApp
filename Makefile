@@ -17,10 +17,10 @@ proto:
     	Proto/*.proto
 
 order:
-	go run .App/OrderService/OrderServiceCMD
+	go run .App/OrderService/CMD
 
 market:
-	go run .App/SpotInstrumentService/MarketServiceCMD
+	go run .App/SpotInstrumentService/CMD
 
 build:
 	CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o bin/order-service  ./App/OrderService/OrderServiceCMD

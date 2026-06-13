@@ -51,7 +51,7 @@ func (h *SISgrpcHandler) ViewMarketsByID(ctx context.Context, req *protoPB.ViewM
 	}, nil
 }
 
-func (h *SISgrpcHandler) ViewAllMarkets(ctx context.Context, req *protoPB.ViewMarketsAllRequest) (*protoPB.ViewMarketsAllResponse, error) {
+func (h *SISgrpcHandler) ViewMarketsAll(ctx context.Context, req *protoPB.ViewMarketsAllRequest) (*protoPB.ViewMarketsAllResponse, error) {
 	size := int(req.GetPageSize())
 	if size <= 0 || size > 50 {
 		size = 10

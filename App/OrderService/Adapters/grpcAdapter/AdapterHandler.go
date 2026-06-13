@@ -71,7 +71,7 @@ func (o *OrderHandler) CreateOrder(ctx context.Context, req *protoPB.CreateOrder
 		Quantity: amount,
 	}
 
-	orderID, err := o.useCase.CreteOrder(ctx, cmd)
+	orderID, err := o.useCase.CreateOrder(ctx, cmd)
 	if err != nil {
 		o.logger.LogError("grpc, failed to crete order",
 			LoggerPorts.Field{Key: "id", Value: user.UserID},
@@ -87,7 +87,7 @@ func (o *OrderHandler) GetOrderStatusByID(ctx context.Context, req *protoPB.Orde
 	if !ok {
 		return nil, ErrUnauthenticated
 	}
-	order, err := o.useCase.GetOrderByID(ctx, req.GetOrderId(), user.UserID)
+	order, err := o.useCase.GetOrderStatusByID(ctx, req.GetOrderId(), user.UserID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (o *OrderHandler) GetOrderStatusByID(ctx context.Context, req *protoPB.Orde
 	}, nil
 }
 
-func (o *OrderHandler) GetAllOrderStatuses(ctx context.Context, req *protoPB.OrderStatusAllRequest) (*protoPB.OrderStatusAllResponse, error) {
+func (o *OrderHandler) GetOrderStatusAll(ctx context.Context, req *protoPB.OrderStatusAllRequest) (*protoPB.OrderStatusAllResponse, error) {
 	user, ok := AuthCTX.GetUser(ctx)
 	if !ok {
 		return nil, ErrUnauthenticated
@@ -107,7 +107,7 @@ func (o *OrderHandler) GetAllOrderStatuses(ctx context.Context, req *protoPB.Ord
 		size = 20
 	}
 
-	orders, nextPageToken, err := o.useCase.GetAllOrders(ctx, user.UserID, req.GetPageToken(), size)
+	orders, nextPageToken, err := o.useCase.GetOrderStatusAll(ctx, user.UserID, req.GetPageToken(), size)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +138,7 @@ func (o *OrderHandler) StreamUpdateOrder(req *protoPB.StreamOrderRequest, stream
 	firstSend := true
 
 	send := func() (terminal bool, err error) {
-		order, err := o.useCase.GetOrderByID(ctx, orderID, user.UserID)
+		order, err := o.useCase.GetOrderStatusByID(ctx, orderID, user.UserID)
 
 		if err != nil {
 			return false, ErrorInterceptor.GRPCConnector(err)

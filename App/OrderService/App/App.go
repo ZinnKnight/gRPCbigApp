@@ -162,22 +162,22 @@ func New(ctx context.Context, cfg *Config.Config, logger LoggerPorts.Logger) (*A
 func (app *App) shutDown() {
 	stoped := make(chan struct{})
 	go func() {
-		app.grpcServer.GracefulStop()
+		app.grpcServer.Stop()
 		close(stoped)
 	}()
 
 	select {
 	case <-stoped:
-		app.logger.LogInfo(fmt.Sprintf("orderapp, grpc gracefull stop"))
+		app.logger.LogInfo("orderapp, grpc gracefull stop")
 	case <-time.After(shutdownTimeout):
-		app.logger.LogError(fmt.Sprintf("orderapp, grpc gracefull stop timeout, forced shutdown"))
-		app.grpcServer.GracefulStop()
+		app.logger.LogError("orderapp, grpc gracefull stop timeout, forced shutdown")
+		app.grpcServer.Stop()
 		<-stoped
 	}
 
 	app.pool.Close()
 	if err := app.rdb.Close(); err != nil {
-		app.logger.LogError(fmt.Sprintf("orderapp, redis close", LoggerPorts.Field{Key: "error", Value: err.Error()}))
+		app.logger.LogError("orderapp, redis close", LoggerPorts.Field{Key: "error", Value: err.Error()})
 	}
 
 	shCTX, cancel := context.WithTimeout(context.Background(), 10*time.Second)

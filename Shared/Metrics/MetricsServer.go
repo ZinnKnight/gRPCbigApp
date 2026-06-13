@@ -16,7 +16,7 @@ func StartMetricsServer(ctx context.Context, port int, handler http.Handler) err
 	})
 
 	server := &http.Server{
-		Addr:    fmt.Sprintf(":%d", port),
+		Addr:    fmt.Sprintf("port :%v", port),
 		Handler: mux,
 	}
 

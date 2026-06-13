@@ -41,7 +41,7 @@ func LoadConfig() (*Config, error) {
 		RedisDB:         getEnvInt("REDIS_DB", 0),
 		RedisPoolSize:   getEnvInt("REDIS_POOL_SIZE", 100),
 		GRPCPort:        getEnvInt("GRPC_PORT", 50051),
-		MetricsPort:     getEnvInt("MetricsPort", 2112),
+		MetricsPort:     getEnvInt("METRICS_PORT", 2112),
 		JWTSecretKey:    getEnv("JWT_SECRET", ""),
 		RateLimitPerMin: getEnvInt("RATE_LIMIT_PER_MIN", 100),
 		// for Pool

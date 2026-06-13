@@ -34,7 +34,7 @@ func run() error {
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintln(os.Stderr, "order-service: %v/n", err)
+		fmt.Fprintf(os.Stderr, "order-service: %v \n", err)
 		os.Exit(1)
 	}
 }

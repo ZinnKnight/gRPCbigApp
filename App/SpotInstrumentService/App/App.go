@@ -135,7 +135,7 @@ func (app *App) shutDown() {
 	stopChan := make(chan struct{})
 
 	go func() {
-		app.grpcServer.GracefulStop()
+		app.grpcServer.Stop()
 		close(stopChan)
 	}()
 	select {
