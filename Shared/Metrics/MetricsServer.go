@@ -2,6 +2,7 @@ package Metrics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -16,7 +17,7 @@ func StartMetricsServer(ctx context.Context, port int, handler http.Handler) err
 	})
 
 	server := &http.Server{
-		Addr:    fmt.Sprintf("port :%v", port),
+		Addr:    fmt.Sprintf(":%d", port),
 		Handler: mux,
 	}
 
@@ -25,7 +26,7 @@ func StartMetricsServer(ctx context.Context, port int, handler http.Handler) err
 		server.Shutdown(context.Background())
 	}()
 
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := server.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("error in metrics server: %w", err)
 	}
 	return nil

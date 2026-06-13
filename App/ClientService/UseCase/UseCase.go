@@ -139,7 +139,7 @@ func (us *UserUseCase) PlanChange(ctx context.Context, userName string, newPlan 
 		if err != nil {
 			return fmt.Errorf("usecase, look for user: %w", err)
 		}
-		if err := us.repo.UpdateUserPlan(ctx, user.UserName, newPlan); err != nil {
+		if err := us.repo.UpdateUserPlan(ctx, user.UserID, newPlan); err != nil {
 			return fmt.Errorf("usecase, user plan changing: %w", err)
 		}
 		user.UserRole = newPlan

@@ -124,7 +124,7 @@ func (o *OrderHandler) GetOrderStatusAll(ctx context.Context, req *protoPB.Order
 	}, nil
 }
 
-func (o *OrderHandler) StreamUpdateOrder(req *protoPB.StreamOrderRequest, stream protoPB.OrderService_StreamOrderUpdatesServer) error {
+func (o *OrderHandler) StreamOrderUpdates(req *protoPB.StreamOrderRequest, stream protoPB.OrderService_StreamOrderUpdatesServer) error {
 	ctx := stream.Context()
 
 	user, ok := AuthCTX.GetUser(ctx)

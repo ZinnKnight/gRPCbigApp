@@ -41,7 +41,7 @@ func (sisr *SISMarketRepo) connection(ctx context.Context) dtExecutor {
 }
 
 func (sisr *SISMarketRepo) FindByName(ctx context.Context, marketId string) (*Domain.MarketDomain, error) {
-	const query = `SELECT market_name, goods_id, accessibility, ttl FROM markets WHERE market_name = $1`
+	const query = `SELECT market_id, market_name, goods_id, accessibility, ttl FROM markets WHERE market_name = $1`
 
 	ctx, span := trace.Start(ctx, "db.FindByID", tracing.KindClient)
 	defer span.End()
@@ -51,7 +51,7 @@ func (sisr *SISMarketRepo) FindByName(ctx context.Context, marketId string) (*Do
 	row := sisr.connection(ctx).QueryRow(ctx, query, marketId)
 
 	var m Domain.MarketDomain
-	if err := row.Scan(&m.MarketID, &m.GoodsID, &m.Accessibility, &m.TTL); err != nil {
+	if err := row.Scan(&m.MarketID, &m.MarketName, &m.GoodsID, &m.Accessibility, &m.TTL); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			span.AddEvent("market_not_found")
 			return nil, Domain.ErrMarketNotFound
