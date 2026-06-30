@@ -122,7 +122,15 @@ func New(ctx context.Context, cfg *Config.Config, logger LoggerPorts.Logger) (*A
 
 	limiter := RateLimiter2.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
 
-	policyProvider := Policy.NewStaticProvider()
+	// пока на месте сделал, позже вынесу в отдельный сервис
+
+	policyProvider, err := Policy.NewStaticProvider()
+	if err != nil {
+		app.rdb.Close()
+		app.pool.Close()
+		_ = app.tracingShutdown(ctx)
+		return nil, fmt.Errorf("orderapp, policy provider initiation: %w", err)
+	}
 	quotaEnforced := Quota.NewEnforced(policyProvider, limiter)
 
 	orderRepo := orderPG.NewOrderRepo(pool)

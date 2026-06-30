@@ -1,11 +1,14 @@
 package Domain
 
-import "errors"
+import (
+	"errors"
+	"gRPCbigapp/Shared/Auth/AuthRoles"
+)
 
 const (
-	Free      UserPlan = "FREE_PLAN_USER"
-	Pro       UserPlan = "PRO_PLAN_USER"
-	AdminRole UserPlan = "ADMIN"
+	Free      UserPlan = UserPlan(AuthRoles.Free)
+	Pro       UserPlan = UserPlan(AuthRoles.Pro)
+	AdminRole UserPlan = UserPlan(AuthRoles.Admin)
 )
 
 type User struct {
