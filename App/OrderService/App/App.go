@@ -18,6 +18,8 @@ import (
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	Metrics2 "gRPCbigapp/Shared/Metrics"
 	"gRPCbigapp/Shared/PanicInterceptor"
+	"gRPCbigapp/Shared/Policy"
+	"gRPCbigapp/Shared/Quota"
 	RateLimiter2 "gRPCbigapp/Shared/RateLimiter"
 	redisClient "gRPCbigapp/Shared/Redis"
 	tracing "gRPCbigapp/Shared/Tracing"
@@ -118,13 +120,16 @@ func New(ctx context.Context, cfg *Config.Config, logger LoggerPorts.Logger) (*A
 
 	eventEmit := EventActionMockOfOutbox.NewMockEmmiter(logger)
 
+	limiter := RateLimiter2.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
+
+	policyProvider := Policy.NewStaticProvider()
+	quotaEnforced := Quota.NewEnforced(policyProvider, limiter)
+
 	orderRepo := orderPG.NewOrderRepo(pool)
-	orderUseCase := orderUC.NewOSUseCase(orderRepo, eventEmit, txManager, logger)
+	orderUseCase := orderUC.NewOSUseCase(orderRepo, eventEmit, txManager, quotaEnforced, logger)
 
 	clientRepo := clientPG.NewUserRepo(pool)
-	clientUseCase := clientUC.NewUserUseCase(clientRepo, eventEmit, txManager, logger)
-
-	limiter := RateLimiter2.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
+	clientUseCase := clientUC.NewUserUseCase(clientRepo, eventEmit, txManager, quotaEnforced, logger)
 
 	metricsRecord := Metrics2.NewPrometheusRecord()
 	app.metricsHandler = metricsRecord.Registry()

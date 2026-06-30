@@ -18,4 +18,5 @@ type CreteOrder struct {
 	MarketID string
 	Price    decimal.Decimal
 	Quantity decimal.Decimal
+	UserPlan string
 }

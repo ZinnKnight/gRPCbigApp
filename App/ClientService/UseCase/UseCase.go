@@ -8,6 +8,8 @@ import (
 	"gRPCbigapp/App/ClientService/Ports"
 	"gRPCbigapp/Shared/EventActionMockOfOutbox"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
+	"gRPCbigapp/Shared/Policy"
+	"gRPCbigapp/Shared/Quota"
 	tracing "gRPCbigapp/Shared/Tracing"
 	"gRPCbigapp/Shared/Txmanager"
 	"gRPCbigapp/Shared/ValidationIntercepter"
@@ -17,25 +19,46 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
+type quotaChecker interface {
+	Check(ctx context.Context, plan string, action Policy.Action, subject string) (Quota.Decision, error)
+}
+
 var csUseCaseTrace = tracing.Tracer("usecase.client_service")
 
 var _ Ports.UserInboundPort = (*UserUseCase)(nil)
 
 type UserUseCase struct {
-	repo      Ports.CSOutboundPorts
-	events    EventActionMockOfOutbox.Emmiter
-	txManager *Txmanager.TxManager
-	logger    LoggerPorts.Logger
+	repo         Ports.CSOutboundPorts
+	events       EventActionMockOfOutbox.Emmiter
+	txManager    *Txmanager.TxManager
+	quotaChecker quotaChecker
+	logger       LoggerPorts.Logger
 }
 
 func NewUserUseCase(repo Ports.CSOutboundPorts, event EventActionMockOfOutbox.Emmiter, txManager *Txmanager.TxManager,
-	logger LoggerPorts.Logger) *UserUseCase {
+	quota quotaChecker, logger LoggerPorts.Logger) *UserUseCase {
 	return &UserUseCase{
-		events:    event,
-		txManager: txManager,
-		logger:    logger,
-		repo:      repo,
+		events:       event,
+		txManager:    txManager,
+		quotaChecker: quota,
+		logger:       logger,
+		repo:         repo,
 	}
+}
+
+func (us *UserUseCase) enforceLoginQuota(ctx context.Context, user *Domain.User) error {
+	dec, err := us.quotaChecker.Check(ctx, string(user.UserRole), Policy.ActionLogin, user.UserName)
+	if err != nil {
+		us.logger.LogError("usecase, login quota check fail: %w",
+			LoggerPorts.Field{Key: "user_name", Value: user.UserName},
+			LoggerPorts.Field{Key: "error", Value: err.Error()},
+		)
+		return nil
+	}
+	if !dec.Allowed {
+		return Domain.ErrTooManyLoginAttempts
+	}
+	return nil
 }
 
 func (us *UserUseCase) UserRegistration(ctx context.Context, rui Ports.RegisterUserInput) (*Domain.User, error) {

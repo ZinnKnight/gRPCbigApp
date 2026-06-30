@@ -8,6 +8,8 @@ import (
 	"gRPCbigapp/App/OrderService/Ports"
 	"gRPCbigapp/Shared/EventActionMockOfOutbox"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
+	"gRPCbigapp/Shared/Policy"
+	"gRPCbigapp/Shared/Quota"
 	"gRPCbigapp/Shared/Txmanager"
 
 	tracing "gRPCbigapp/Shared/Tracing"
@@ -23,23 +25,45 @@ var tracer = otel.Tracer("usecase.order")
 
 var _ Ports.OSInboundPort = (*OSUseCase)(nil)
 
+type quotaChecker interface {
+	Check(ctx context.Context, plan string, action Policy.Action, subject string) (Quota.Decision, error)
+}
+
 type OSUseCase struct {
-	repo      Ports.OSOutboundPorts
-	events    EventActionMockOfOutbox.Emmiter
-	txManager *Txmanager.TxManager
-	logger    LoggerPorts.Logger
+	repo         Ports.OSOutboundPorts
+	events       EventActionMockOfOutbox.Emmiter
+	txManager    *Txmanager.TxManager
+	quotaChecker quotaChecker
+	logger       LoggerPorts.Logger
 }
 
 func NewOSUseCase(repo Ports.OSOutboundPorts,
 	event EventActionMockOfOutbox.Emmiter,
 	txManager *Txmanager.TxManager,
+	quota quotaChecker,
 	logger LoggerPorts.Logger) *OSUseCase {
 	return &OSUseCase{
-		repo:      repo,
-		events:    event,
-		txManager: txManager,
-		logger:    logger,
+		repo:         repo,
+		events:       event,
+		txManager:    txManager,
+		quotaChecker: quota,
+		logger:       logger,
 	}
+}
+
+func (ouc *OSUseCase) enforcedOrderQuota(ctx context.Context, cmd Ports.CreteOrder) error {
+	des, err := ouc.quotaChecker.Check(ctx, cmd.UserPlan, Policy.ActionCreateOrder, cmd.UserID)
+	if err != nil {
+		ouc.logger.LogError("usecase, order quota check failed (fail-open)",
+			LoggerPorts.Field{Key: "user_id", Value: cmd.UserID},
+			LoggerPorts.Field{Key: "error", Value: err.Error()},
+		)
+		return nil
+	}
+	if !des.Allowed {
+		return Domain.ErrOrderQuotaExceeded
+	}
+	return nil
 }
 
 func (osu *OSUseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*Domain.OrderDomain, error) {
@@ -51,6 +75,12 @@ func (osu *OSUseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*D
 		attribute.String("user.id", cmd.UserID),
 		attribute.String("market.id", cmd.MarketID),
 	)
+
+	if err := osu.enforcedOrderQuota(ctx, cmd); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "order quota exceeded")
+		return nil, err
+	}
 
 	order, err := Domain.NewOrder(cmd.UserID, cmd.MarketID, cmd.Price, cmd.Quantity)
 	if err != nil {

@@ -37,4 +37,5 @@ var (
 	ErrEmptyName            = errors.New("user name is empty")
 	ErrEmptyPassword        = errors.New("user password is empty")
 	ErrIncorrectCredentials = errors.New("incorrect credentials")
+	ErrTooManyLoginAttempts = errors.New("too many loginAttempts")
 )

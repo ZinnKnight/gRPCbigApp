@@ -40,6 +40,7 @@ var (
 	ErrInvalidMarketID    = errors.New("invalid order id")
 	ErrInvalidUserID      = errors.New("invalid user id")
 	ErrOrderAlreadyExists = errors.New("order already exists")
+	ErrOrderQuotaExceeded = errors.New("order status invalid")
 )
 
 func NewOrder(userID, marketID string, price, amount decimal.Decimal) (*OrderDomain, error) {

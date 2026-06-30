@@ -18,7 +18,7 @@ var slidingWindowScript = redis.NewScript(
 	`local now = tonumber(ARGV[1])
 local window = tonumber(ARGV[2])
 local limit = tonumber(ARGV[3])
-local member = tonumber(ARGV[4])
+local member = ARGV[4]
 
 redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, now - window)
 local count = redis.call("ZCARD", KEYS[1])
@@ -71,23 +71,29 @@ func NewRateLimiter(rdb *redis.Client, limit int, window time.Duration) *Limiter
 }
 
 func (rl *Limiter) Allow(ctx context.Context, userID string) (*RateLimiterRes, error) {
-	ctx, span := tracer.Start(ctx, "ratelimiter.Allow", tracing.KindClient)
+	return rl.AllowKey(ctx, fmt.Sprintf("rate-limiting:%s", userID), rl.limit, rl.slidingWindow)
+}
+
+func (rl *Limiter) AllowKey(ctx context.Context, key string, limit int, duration time.Duration) (*RateLimiterRes, error) {
+
+	ctx, span := tracer.Start(ctx, "ratelimiter.AllowKey", tracing.KindClient)
 	defer span.End()
+
 	span.SetAttributes(tracing.RedisDB("EVAL")...)
-	span.SetAttributes(attribute.String("user.id", userID))
+	span.SetAttributes(
+		attribute.String("ratelimit.key", key),
+		attribute.Int("ratelimit.limit", limit),
+	)
 
-	key := fmt.Sprintf("rate_limit:%s", userID)
 	nowMs := time.Now().UnixMilli()
-
 	windowMs := rl.slidingWindow.Milliseconds()
 
 	member := fmt.Sprintf("%d - %s", nowMs, uuid.NewString())
 
-	res, err := slidingWindowScript.Run(ctx, rl.rdb, []string{key}, nowMs, windowMs, rl.limit, member).Result()
+	res, err := slidingWindowScript.Run(ctx, rl.rdb, []string{key}, nowMs, windowMs, limit, member).Result()
 	if err != nil {
 		return nil, fmt.Errorf("ratelimiter: sliding window eval: %w", err)
 	}
-
 	vals, ok := res.([]interface{})
 	if !ok || len(vals) != 3 {
 		return nil, fmt.Errorf("ratelimiter: sliding window invalid result: %v", res)
@@ -109,4 +115,5 @@ func (rl *Limiter) Allow(ctx context.Context, userID string) (*RateLimiterRes, e
 		Allowed:    allowed,
 		Remaining:  remaning,
 		RetryAfter: retryAfter}, nil
+
 }
