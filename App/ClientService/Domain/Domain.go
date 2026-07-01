@@ -24,6 +24,10 @@ type IsAdmin struct {
 	UserName string
 }
 
+func CanSelfPlanChange(plan UserPlan) bool {
+	return plan == Free || plan == Pro
+}
+
 func (usr *User) ValidateUser() error {
 	if usr.UserName == "" {
 		return ErrEmptyName

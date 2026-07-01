@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"gRPCbigapp/App/ClientService/Domain"
 	"gRPCbigapp/App/ClientService/Ports"
-	"gRPCbigapp/Shared/EventActionMockOfOutbox"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
+	"gRPCbigapp/Shared/Outbox"
 	"gRPCbigapp/Shared/Policy"
 	"gRPCbigapp/Shared/Quota"
 	tracing "gRPCbigapp/Shared/Tracing"
@@ -29,13 +29,13 @@ var _ Ports.UserInboundPort = (*UserUseCase)(nil)
 
 type UserUseCase struct {
 	repo         Ports.CSOutboundPorts
-	events       EventActionMockOfOutbox.Emmiter
+	events       Outbox.Emiter
 	txManager    *Txmanager.TxManager
 	quotaChecker quotaChecker
 	logger       LoggerPorts.Logger
 }
 
-func NewUserUseCase(repo Ports.CSOutboundPorts, event EventActionMockOfOutbox.Emmiter, txManager *Txmanager.TxManager,
+func NewUserUseCase(repo Ports.CSOutboundPorts, event Outbox.Emiter, txManager *Txmanager.TxManager,
 	quota quotaChecker, logger LoggerPorts.Logger) *UserUseCase {
 	return &UserUseCase{
 		events:       event,
@@ -102,7 +102,7 @@ func (us *UserUseCase) UserRegistration(ctx context.Context, rui Ports.RegisterU
 		return nil, fmt.Errorf("usecase, user marshaling: %w", err)
 	}
 
-	event := EventActionMockOfOutbox.Event{
+	event := Outbox.Event{
 		AggregateType:  "user",
 		AggregateID:    user.UserID,
 		EventType:      "UserRegistered",
@@ -175,7 +175,7 @@ func (us *UserUseCase) PlanChange(ctx context.Context, userName string, newPlan 
 		if err != nil {
 			return fmt.Errorf("usecase, user plan marshaling: %w", err)
 		}
-		return us.events.Emit(ctx, EventActionMockOfOutbox.Event{
+		return us.events.Emit(ctx, Outbox.Event{
 			AggregateType:  "user",
 			AggregateID:    userName,
 			EventType:      "UserPlanChanged",

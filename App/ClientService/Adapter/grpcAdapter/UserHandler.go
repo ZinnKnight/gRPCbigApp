@@ -16,16 +16,18 @@ import (
 
 type UserHandler struct {
 	protoPB.UnimplementedAuthServiceServer
-	useCase Ports.UserInboundPort
-	jwt     *AuthAdapter.JWTService
-	logger  LoggerPorts.Logger
+	useCase    Ports.UserInboundPort
+	jwt        *AuthAdapter.JWTService
+	preRequest PlanUpgradePreRequest
+	logger     LoggerPorts.Logger
 }
 
-func NewUserhandler(uc Ports.UserInboundPort, log LoggerPorts.Logger, j *AuthAdapter.JWTService) *UserHandler {
+func NewUserhandler(uc Ports.UserInboundPort, log LoggerPorts.Logger, j *AuthAdapter.JWTService, preRequest PlanChangePreRequestStub) *UserHandler {
 	return &UserHandler{
-		useCase: uc,
-		jwt:     j,
-		logger:  log,
+		useCase:    uc,
+		jwt:        j,
+		preRequest: preRequest,
+		logger:     log,
 	}
 }
 
@@ -38,11 +40,6 @@ func planToUser(plan Domain.UserPlan) protoPB.Roles {
 
 func roleToUser(role protoPB.Roles) Domain.UserPlan {
 	return Domain.UserPlan(role.String())
-}
-
-// Это временный мок, как будет кафка - необходимо будет переделать
-func (uh *UserHandler) planChangeActionCompleted(_ context.Context, _ *AuthCTX.UserAuth) bool {
-	return true
 }
 
 func (uh *UserHandler) UserRegistration(ctx context.Context, req *protoPB.RegisterRequest) (*protoPB.AuthResponse, error) {
@@ -83,11 +80,19 @@ func (uh *UserHandler) PlanChange(ctx context.Context, req *protoPB.PlanChangeRe
 	if !ok {
 		return nil, ErrorInterceptor.NewError(ErrorInterceptor.Unauthenticated, "Требуется авторизация", nil)
 	}
-	if !uh.planChangeActionCompleted(ctx, target) {
-		return nil, ErrorInterceptor.NewError(ErrorInterceptor.FailedPrecondition, "Не выполенны необходимые шаги", nil)
+	if req.GetUserName() != target.UserName {
+		return nil, ErrorInterceptor.NewError(ErrorInterceptor.PermissionDenied, "Возможно изменить лишь собственный тариф", nil)
 	}
 
 	newPlan := roleToUser(req.GetUserRole())
+
+	if !Domain.CanSelfPlanChange(newPlan) {
+		return nil, ErrorInterceptor.NewError(ErrorInterceptor.PermissionDenied, "Нет возможности изменить на иные тарифы помимо Pro и Free", nil)
+	}
+
+	if newPlan == Domain.Pro && !uh.preRequest.UpgradeAgree(ctx, target) {
+		return nil, ErrorInterceptor.NewError(ErrorInterceptor.FailedPrecondition, "Для перехода на иной вариант подписки - необходимо выполнение условия", nil)
+	}
 
 	user, err := uh.useCase.PlanChange(ctx, target.UserName, newPlan)
 	if err != nil {
