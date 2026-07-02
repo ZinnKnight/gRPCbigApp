@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"gRPCbigapp/App/OrderService/Domain"
 	"gRPCbigapp/App/OrderService/Ports"
-	"gRPCbigapp/Shared/EventActionMockOfOutbox"
+	"gRPCbigapp/Shared/Events"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	"gRPCbigapp/Shared/Policy"
 	"gRPCbigapp/Shared/Quota"
@@ -20,29 +20,28 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-// weird name, but done to save a logick in Jaeger for filter
 var tracer = otel.Tracer("usecase.order")
 
-var _ Ports.OSInboundPort = (*OSUseCase)(nil)
+var _ Ports.OSInboundPort = (*UseCase)(nil)
 
 type quotaChecker interface {
 	Check(ctx context.Context, plan string, action Policy.Action, subject string) (Quota.Decision, error)
 }
 
-type OSUseCase struct {
+type UseCase struct {
 	repo         Ports.OSOutboundPorts
-	events       EventActionMockOfOutbox.Emmiter
+	events       Events.Emitter
 	txManager    *Txmanager.TxManager
 	quotaChecker quotaChecker
 	logger       LoggerPorts.Logger
 }
 
 func NewOSUseCase(repo Ports.OSOutboundPorts,
-	event EventActionMockOfOutbox.Emmiter,
+	event Events.Emitter,
 	txManager *Txmanager.TxManager,
 	quota quotaChecker,
-	logger LoggerPorts.Logger) *OSUseCase {
-	return &OSUseCase{
+	logger LoggerPorts.Logger) *UseCase {
+	return &UseCase{
 		repo:         repo,
 		events:       event,
 		txManager:    txManager,
@@ -51,7 +50,7 @@ func NewOSUseCase(repo Ports.OSOutboundPorts,
 	}
 }
 
-func (ouc *OSUseCase) enforcedOrderQuota(ctx context.Context, cmd Ports.CreteOrder) error {
+func (ouc *UseCase) enforcedOrderQuota(ctx context.Context, cmd Ports.CreteOrder) error {
 	des, err := ouc.quotaChecker.Check(ctx, cmd.UserPlan, Policy.ActionCreateOrder, cmd.UserID)
 	if err != nil {
 		ouc.logger.LogError("usecase, order quota check failed (fail-open)",
@@ -66,7 +65,7 @@ func (ouc *OSUseCase) enforcedOrderQuota(ctx context.Context, cmd Ports.CreteOrd
 	return nil
 }
 
-func (osu *OSUseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*Domain.OrderDomain, error) {
+func (osu *UseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*Domain.OrderDomain, error) {
 
 	ctx, span := tracer.Start(ctx, "usecase.CreteOrder", tracing.KindInternal)
 	defer span.End()
@@ -102,12 +101,12 @@ func (osu *OSUseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*D
 		return nil, fmt.Errorf("usecase, fail in marshaling order: %w", err)
 	}
 
-	event := EventActionMockOfOutbox.Event{
-		AggregateType:  "order",
-		AggregateID:    order.OrderID,
-		EventType:      "OrderCreated",
-		PayLoad:        payload,
-		IdempotencyKey: uuid.New().String(),
+	event := Events.Events{
+		AggregationType: "order",
+		AggregateId:     order.OrderID,
+		EventType:       "OrderCreated",
+		PayLoad:         payload,
+		IdempotencyKey:  uuid.New().String(),
 	}
 
 	err = osu.txManager.Do(ctx, func(ctx context.Context) error {
@@ -135,7 +134,7 @@ func (osu *OSUseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*D
 	return order, nil
 }
 
-func (osu *OSUseCase) GetOrderStatusByID(ctx context.Context, orderID, userID string) (*Domain.OrderDomain, error) {
+func (osu *UseCase) GetOrderStatusByID(ctx context.Context, orderID, userID string) (*Domain.OrderDomain, error) {
 	ctx, span := tracer.Start(ctx, "usecase.GetOrderByID", tracing.KindInternal)
 	defer span.End()
 
@@ -150,7 +149,7 @@ func (osu *OSUseCase) GetOrderStatusByID(ctx context.Context, orderID, userID st
 	return order, nil
 }
 
-func (osu *OSUseCase) GetOrderStatusAll(ctx context.Context, userID, pageToken string, pageSize int) ([]*Domain.OrderDomain, string, error) {
+func (osu *UseCase) GetOrderStatusAll(ctx context.Context, userID, pageToken string, pageSize int) ([]*Domain.OrderDomain, string, error) {
 	ctx, span := tracer.Start(ctx, "usecase.GetAllOrders", tracing.KindInternal)
 	defer span.End()
 

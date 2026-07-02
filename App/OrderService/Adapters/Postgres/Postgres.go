@@ -30,9 +30,9 @@ func NewOrderRepo(pool *pgxpool.Pool) *OrderRepo {
 }
 
 type dxExecute interface {
-	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
-	Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error)
-	QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row
+	Exec(ctx context.Context, sql string, arguments ...any) (pgconn.CommandTag, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
 func (or *OrderRepo) connection(ctx context.Context) dxExecute {
@@ -62,6 +62,22 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)`
 			return Domain.ErrOrderAlreadyExists
 		}
 		return fmt.Errorf("postgres, save order: %w", err)
+	}
+	return nil
+}
+
+func (or *OrderRepo) UpdateStatus(ctx context.Context, orderID, status string) error {
+	const query = `Update orders SET order_status = $1 WHERE order_id = $2`
+
+	ctx, span := orderRepoTrace.Start(ctx, "db.UpdateStatus", tracing.KindClient)
+	defer span.End()
+
+	span.SetAttributes(tracing.PostgresDB(query)...)
+
+	if _, err := or.connection(ctx).Exec(ctx, query, status, orderID); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "db.UpdateStatus failed")
+		return fmt.Errorf("postgres, update order status: %w", err)
 	}
 	return nil
 }

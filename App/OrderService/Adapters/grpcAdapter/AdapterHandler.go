@@ -4,29 +4,26 @@ import (
 	"context"
 	"gRPCbigapp/App/OrderService/Domain"
 	"gRPCbigapp/App/OrderService/Ports"
+	"gRPCbigapp/App/OrderService/Streaming"
 	"gRPCbigapp/Proto/protoPB"
 	"gRPCbigapp/Shared/Auth/AuthCTX"
+	moneyconverter "gRPCbigapp/Shared/Converters/Money"
 	"gRPCbigapp/Shared/ErrorInterceptor"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
-	"time"
-
-	moneyconverter "gRPCbigapp/Shared/Converters/Money"
 )
-
-// т.к outbox вырезал, а ломать всю логику не хочется - поставил вот такую затычку
-
-const poolInterval = 5 * time.Second
 
 type OrderHandler struct {
 	protoPB.UnimplementedOrderServiceServer
 	useCase Ports.OSInboundPort
+	hub     *Streaming.Hub
 	logger  LoggerPorts.Logger
 }
 
-func NewOrderHandler(log LoggerPorts.Logger, osp Ports.OSInboundPort) *OrderHandler {
+func NewOrderHandler(log LoggerPorts.Logger, osp Ports.OSInboundPort, hub *Streaming.Hub) *OrderHandler {
 	return &OrderHandler{
 		logger:  log,
 		useCase: osp,
+		hub:     hub,
 	}
 }
 
@@ -69,6 +66,7 @@ func (o *OrderHandler) CreateOrder(ctx context.Context, req *protoPB.CreateOrder
 		MarketID: req.GetMarketId(),
 		Price:    price,
 		Quantity: amount,
+		UserPlan: user.UserPlan,
 	}
 
 	orderID, err := o.useCase.CreateOrder(ctx, cmd)
@@ -134,6 +132,9 @@ func (o *OrderHandler) StreamOrderUpdates(req *protoPB.StreamOrderRequest, strea
 
 	orderID := req.GetOrderId()
 
+	subID, updates := o.hub.Subscribe(orderID)
+	defer o.hub.Unsubscribe(orderID, subID)
+
 	var lastSend Domain.OrderStatus
 	firstSend := true
 
@@ -156,18 +157,11 @@ func (o *OrderHandler) StreamOrderUpdates(req *protoPB.StreamOrderRequest, strea
 		return order.OrderStatus.IsTerminal(), nil
 	}
 
-	if terminal, err := send(); err != nil || terminal {
-		return err
-	}
-
-	ticker := time.NewTicker(poolInterval)
-	defer ticker.Stop()
-
 	for {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
-		case <-ticker.C:
+		case <-updates:
 			if terminal, err := send(); err != nil || terminal {
 				return err
 			}

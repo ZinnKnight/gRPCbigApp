@@ -2,26 +2,33 @@ package App
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	clientPG "gRPCbigapp/App/ClientService/Adapter/PostgresAdapter"
 	clientGRPC "gRPCbigapp/App/ClientService/Adapter/grpcAdapter"
 	clientUC "gRPCbigapp/App/ClientService/UseCase"
 	orderPG "gRPCbigapp/App/OrderService/Adapters/Postgres"
 	orderGRPC "gRPCbigapp/App/OrderService/Adapters/grpcAdapter"
+	"gRPCbigapp/App/OrderService/Streaming"
 	orderUC "gRPCbigapp/App/OrderService/UseCase"
 	"gRPCbigapp/Proto/protoPB"
 	authAdapter "gRPCbigapp/Shared/Auth/AuthAdapter"
 	authInterceptor "gRPCbigapp/Shared/Auth/AuthInterceptor"
 	"gRPCbigapp/Shared/Config"
 	"gRPCbigapp/Shared/ErrorInterceptor"
-	"gRPCbigapp/Shared/EventActionMockOfOutbox"
+	"gRPCbigapp/Shared/Events"
+	"gRPCbigapp/Shared/Idempotentor"
+	Kafka "gRPCbigapp/Shared/Kafka"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	Metrics2 "gRPCbigapp/Shared/Metrics"
+	"gRPCbigapp/Shared/Orchestrator"
+	"gRPCbigapp/Shared/Outbox"
 	"gRPCbigapp/Shared/PanicInterceptor"
 	"gRPCbigapp/Shared/Policy"
 	"gRPCbigapp/Shared/Quota"
 	RateLimiter2 "gRPCbigapp/Shared/RateLimiter"
 	redisClient "gRPCbigapp/Shared/Redis"
+	"gRPCbigapp/Shared/SagaMessages"
 	tracing "gRPCbigapp/Shared/Tracing"
 	"gRPCbigapp/Shared/Txmanager"
 	"gRPCbigapp/Shared/ValidationIntercepter"
@@ -29,6 +36,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -51,6 +59,12 @@ type App struct {
 	logger          LoggerPorts.Logger
 	pool            *pgxpool.Pool
 	rdb             *redisClient.RedisClient
+	producer        *Kafka.Producer
+	relay           *Outbox.Relay
+	orderConsumer   *Kafka.Consumer
+	orchestrator    *Orchestrator.Orchestrator
+	statusConsumer  *Kafka.Consumer
+	hub             *Streaming.Hub
 	grpcServer      *grpc.Server
 	listening       net.Listener
 	metricsHandler  http.Handler
@@ -116,16 +130,84 @@ func New(ctx context.Context, cfg *Config.Config, logger LoggerPorts.Logger) (*A
 	}
 	app.rdb = rdb
 
+	producer, err := Kafka.NewProducer(ctx, Kafka.Config{
+		Brokers:  cfg.KafkaBrokers,
+		ClientID: cfg.ServiceName,
+	})
+	if err != nil {
+		app.rdb.Close()
+		app.pool.Close()
+		_ = app.tracingShutdown(ctx)
+		return nil, fmt.Errorf("orderapp, Kafka producer initiation: %w", err)
+	}
+	app.producer = producer
+
 	txManager := Txmanager.NewTxManager(pool)
 
-	eventEmit := EventActionMockOfOutbox.NewMockEmmiter(logger)
+	topicResolver := func(e Events.Events) string {
+		switch e.EventType {
+		case SagaMessages.EventOrderCreated:
+			return SagaMessages.TopicOrderEvents
+		case SagaMessages.CommandReserveStock:
+			return SagaMessages.TopicSagaCommands
+		case SagaMessages.EventOrderStatusChanged:
+			return SagaMessages.TopicOrderStatus
+		default:
+			return e.AggregationType + ".events"
+		}
+	}
+	eventEmit := Outbox.NewWriter(pool, topicResolver)
+
+	app.relay = Outbox.NewRelay(pool, logger, producer, 100, time.Second)
+
+	orderRepo := orderPG.NewOrderRepo(pool)
+
+	orchestrator := Orchestrator.NewOrchestrator(
+		orderRepo,
+		txManager,
+		eventEmit,
+		Idempotentor.NewGuard(pool, "order-orchestrator"),
+		logger,
+	)
+
+	orderConsumer, err := Kafka.NewConsumer(ctx, Kafka.ConsumerConfig{
+		Brokers: cfg.KafkaBrokers,
+		Group:   "order-orchestrator",
+		Topics:  []string{SagaMessages.TopicOrderEvents, SagaMessages.TopicSagaReplies},
+	}, logger)
+	if err != nil {
+		app.producer.Close()
+		app.rdb.Close()
+		app.pool.Close()
+		_ = app.tracingShutdown(ctx)
+		return nil, fmt.Errorf("orderapp, order-orchestrator initiation: %w", err)
+	}
+	app.orderConsumer = orderConsumer
+	app.orchestrator = orchestrator
+
+	app.hub = Streaming.NewHub()
+	statusConsumer, err := Kafka.NewConsumer(ctx, Kafka.ConsumerConfig{
+		Brokers:    cfg.KafkaBrokers,
+		Group:      "order-status-sream" + uuid.NewString(),
+		Topics:     []string{SagaMessages.TopicOrderStatus},
+		StartAtEnd: true,
+	}, logger)
+	if err != nil {
+		app.producer.Close()
+		app.rdb.Close()
+		app.pool.Close()
+		_ = app.tracingShutdown(ctx)
+		return nil, fmt.Errorf("orderapp, order-status-sream initiation: %w", err)
+	}
+	app.statusConsumer = statusConsumer
 
 	limiter := RateLimiter2.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
 
-	// пока на месте сделал, позже вынесу в отдельный сервис
-
 	policyProvider, err := Policy.NewStaticProvider()
 	if err != nil {
+		app.statusConsumer.Close()
+		app.orderConsumer.Close()
+		app.producer.Close()
 		app.rdb.Close()
 		app.pool.Close()
 		_ = app.tracingShutdown(ctx)
@@ -133,7 +215,6 @@ func New(ctx context.Context, cfg *Config.Config, logger LoggerPorts.Logger) (*A
 	}
 	quotaEnforced := Quota.NewEnforced(policyProvider, limiter)
 
-	orderRepo := orderPG.NewOrderRepo(pool)
 	orderUseCase := orderUC.NewOSUseCase(orderRepo, eventEmit, txManager, quotaEnforced, logger)
 
 	clientRepo := clientPG.NewUserRepo(pool)
@@ -143,8 +224,8 @@ func New(ctx context.Context, cfg *Config.Config, logger LoggerPorts.Logger) (*A
 	app.metricsHandler = metricsRecord.Registry()
 	jwtService := authAdapter.NewJWTService([]byte(cfg.JWTSecretKey), jwtTTL)
 
-	orderHandler := orderGRPC.NewOrderHandler(logger, orderUseCase)
-	clientHandler := clientGRPC.NewUserhandler(clientUseCase, logger, jwtService)
+	orderHandler := orderGRPC.NewOrderHandler(logger, orderUseCase, app.hub)
+	clientHandler := clientGRPC.NewUserhandler(clientUseCase, logger, jwtService, clientGRPC.NewPlanChangePreRequestStub())
 
 	app.grpcServer = grpc.NewServer(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
@@ -162,6 +243,9 @@ func New(ctx context.Context, cfg *Config.Config, logger LoggerPorts.Logger) (*A
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCPort))
 	if err != nil {
+		app.statusConsumer.Close()
+		app.orderConsumer.Close()
+		app.producer.Close()
 		app.rdb.Close()
 		app.pool.Close()
 		_ = app.tracingShutdown(ctx)
@@ -188,6 +272,16 @@ func (app *App) shutDown() {
 		<-stoped
 	}
 
+	if app.statusConsumer != nil {
+		app.statusConsumer.Close()
+	}
+	if app.orderConsumer != nil {
+		app.orderConsumer.Close()
+	}
+	if app.producer != nil {
+		app.producer.Close()
+	}
+
 	app.pool.Close()
 	if err := app.rdb.Close(); err != nil {
 		app.logger.LogError("orderapp, redis close", LoggerPorts.Field{Key: "error", Value: err.Error()})
@@ -200,6 +294,22 @@ func (app *App) shutDown() {
 	}
 }
 
+func (app *App) publishStatusUpdate(_ context.Context, message Kafka.Message) error {
+	if message.Header["event_type"] != SagaMessages.EventOrderStatusChanged {
+		return nil
+	}
+
+	var p SagaMessages.OrderStatusChangedPayload
+
+	if err := json.Unmarshal(message.Value, &p); err != nil {
+		app.logger.LogError("orderApp, bad OrderStatusChange payload",
+			LoggerPorts.Field{Key: "error", Value: err.Error()})
+		return nil
+	}
+	app.hub.Publish(Streaming.Update{OrderID: p.OrderID, Status: p.Status})
+	return nil
+}
+
 func (app *App) Run(ctx context.Context) error {
 	workerCTX, workerCancel := context.WithCancel(ctx)
 
@@ -208,6 +318,16 @@ func (app *App) Run(ctx context.Context) error {
 			app.logger.LogError("orderApp, metrics server startup", LoggerPorts.Field{Key: "error", Value: err})
 		}
 	}()
+
+	// outbox
+	go app.relay.Run(workerCTX)
+
+	// оркестратор
+	go app.orderConsumer.Run(workerCTX, app.orchestrator.Handle)
+
+	// стриминг
+	go app.statusConsumer.Run(workerCTX, app.publishStatusUpdate)
+
 	serverErr := make(chan error, 1)
 
 	go func() {

@@ -12,6 +12,12 @@ type Config struct {
 	Brokers  []string
 	ClientID string
 }
+
+type Header struct {
+	Key   string
+	Value []byte
+}
+
 type Producer struct {
 	client *kgo.Client
 }
@@ -43,14 +49,21 @@ func NewProducer(ctx context.Context, config Config) (*Producer, error) {
 	}, nil
 }
 
-func (p *Producer) Publish(ctx context.Context, topic string, key, value []byte) error {
+func (p *Producer) Publish(ctx context.Context, topic string, key, value []byte, headers ...Header) error {
 	record := &kgo.Record{
 		Topic: topic,
 		Key:   key,
 		Value: value,
 	}
-	if err := p.client.ProduceSync(ctx, record).FirstErr(); err != nil {
-		return fmt.Errorf("kafka, produce record: %w, to topic: %q", err, topic)
+
+	for _, h := range headers {
+		record.Headers = append(record.Headers, kgo.RecordHeader{
+			Key:   h.Key,
+			Value: h.Value,
+		})
+		if err := p.client.ProduceSync(ctx, record).FirstErr(); err != nil {
+			return fmt.Errorf("kafka.ProduceSync to %q: %w", topic, err)
+		}
 	}
 	return nil
 }
