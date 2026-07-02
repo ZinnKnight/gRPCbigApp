@@ -50,10 +50,10 @@ func NewOSUseCase(repo Ports.OSOutboundPorts,
 	}
 }
 
-func (ouc *UseCase) enforcedOrderQuota(ctx context.Context, cmd Ports.CreteOrder) error {
-	des, err := ouc.quotaChecker.Check(ctx, cmd.UserPlan, Policy.ActionCreateOrder, cmd.UserID)
+func (uc *UseCase) enforcedOrderQuota(ctx context.Context, cmd Ports.CreteOrder) error {
+	des, err := uc.quotaChecker.Check(ctx, cmd.UserPlan, Policy.ActionCreateOrder, cmd.UserID)
 	if err != nil {
-		ouc.logger.LogError("usecase, order quota check failed (fail-open)",
+		uc.logger.LogError("usecase, order quota check failed (fail-open)",
 			LoggerPorts.Field{Key: "user_id", Value: cmd.UserID},
 			LoggerPorts.Field{Key: "error", Value: err.Error()},
 		)
@@ -65,7 +65,7 @@ func (ouc *UseCase) enforcedOrderQuota(ctx context.Context, cmd Ports.CreteOrder
 	return nil
 }
 
-func (osu *UseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*Domain.OrderDomain, error) {
+func (uc *UseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*Domain.OrderDomain, error) {
 
 	ctx, span := tracer.Start(ctx, "usecase.CreteOrder", tracing.KindInternal)
 	defer span.End()
@@ -75,7 +75,7 @@ func (osu *UseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*Dom
 		attribute.String("market.id", cmd.MarketID),
 	)
 
-	if err := osu.enforcedOrderQuota(ctx, cmd); err != nil {
+	if err := uc.enforcedOrderQuota(ctx, cmd); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "order quota exceeded")
 		return nil, err
@@ -109,24 +109,24 @@ func (osu *UseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*Dom
 		IdempotencyKey:  uuid.New().String(),
 	}
 
-	err = osu.txManager.Do(ctx, func(ctx context.Context) error {
-		if err := osu.repo.SaveOrder(ctx, order); err != nil {
+	err = uc.txManager.Do(ctx, func(ctx context.Context) error {
+		if err := uc.repo.SaveOrder(ctx, order); err != nil {
 			return fmt.Errorf("usecase, fail in saving order: %w", err)
 		}
-		if err := osu.events.Emit(ctx, event); err != nil {
+		if err := uc.events.Emit(ctx, event); err != nil {
 			return fmt.Errorf("usecase, fail in saving event: %w", err)
 		}
 		return nil
 	})
 	if err != nil {
-		osu.logger.LogError("usecase, fail in creating order: %v, ",
+		uc.logger.LogError("usecase, fail in creating order: %v, ",
 			LoggerPorts.Field{Key: "user_id", Value: order.UserID},
 			LoggerPorts.Field{Key: "error", Value: err.Error()},
 		)
 		return nil, fmt.Errorf("usecase, creating order: %w", err)
 	}
 
-	osu.logger.LogInfo("order creted",
+	uc.logger.LogInfo("order creted",
 		LoggerPorts.Field{Key: "user_id", Value: order.UserID},
 		LoggerPorts.Field{Key: "order_id", Value: order.OrderID},
 	)
@@ -134,13 +134,13 @@ func (osu *UseCase) CreateOrder(ctx context.Context, cmd Ports.CreteOrder) (*Dom
 	return order, nil
 }
 
-func (osu *UseCase) GetOrderStatusByID(ctx context.Context, orderID, userID string) (*Domain.OrderDomain, error) {
+func (uc *UseCase) GetOrderStatusByID(ctx context.Context, orderID, userID string) (*Domain.OrderDomain, error) {
 	ctx, span := tracer.Start(ctx, "usecase.GetOrderByID", tracing.KindInternal)
 	defer span.End()
 
 	span.SetAttributes(attribute.String("user.id", userID), attribute.String("order.id", orderID))
 
-	order, err := osu.repo.FindByID(ctx, orderID, userID)
+	order, err := uc.repo.FindByID(ctx, orderID, userID)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "repo.FindByID validation")
@@ -149,13 +149,13 @@ func (osu *UseCase) GetOrderStatusByID(ctx context.Context, orderID, userID stri
 	return order, nil
 }
 
-func (osu *UseCase) GetOrderStatusAll(ctx context.Context, userID, pageToken string, pageSize int) ([]*Domain.OrderDomain, string, error) {
+func (uc *UseCase) GetOrderStatusAll(ctx context.Context, userID, pageToken string, pageSize int) ([]*Domain.OrderDomain, string, error) {
 	ctx, span := tracer.Start(ctx, "usecase.GetAllOrders", tracing.KindInternal)
 	defer span.End()
 
 	span.SetAttributes(attribute.String("user.id", userID), attribute.Int("page.size", pageSize))
 
-	orders, err := osu.repo.FindAll(ctx, userID, pageToken, pageSize+1)
+	orders, err := uc.repo.FindAll(ctx, userID, pageToken, pageSize+1)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "repo.FindAll validation")
