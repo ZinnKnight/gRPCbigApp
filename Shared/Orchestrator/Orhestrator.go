@@ -129,7 +129,7 @@ func (o *Orchestrator) handleReplay(ctx context.Context, msg Kafka.Message, rese
 			return nil
 		}
 
-		if err := o.repo.UpdateStruct(ctx, orderID, newStatus); err != nil {
+		if err := o.repo.UpdateStatus(ctx, orderID, newStatus); err != nil {
 			return err
 		}
 
@@ -138,10 +138,12 @@ func (o *Orchestrator) handleReplay(ctx context.Context, msg Kafka.Message, rese
 			Status:  newStatus,
 		})
 		if err != nil {
-			return fmt.Errorf("orchestrator, marshal payload Error: %w", err,
-				LoggerPorts.Field{Key: "order_id", Value: orderID},
-				LoggerPorts.Field{Key: "status", Value: newStatus})
+			return fmt.Errorf("orchestrator, marshal payload Error: %w", err)
 		}
+		o.logger.LogInfo("orchestrator, duplicate saga replay skipped",
+			LoggerPorts.Field{Key: "order_id", Value: orderID},
+			LoggerPorts.Field{Key: "status", Value: newStatus})
+
 		return o.events.Emit(ctx, Events.Events{
 			AggregationType: "order",
 			AggregateId:     orderID,
