@@ -158,7 +158,7 @@ func New(ctx context.Context, cfg *Config.Config, logger LoggerPorts.Logger) (*A
 	}
 	eventEmit := Outbox.NewWriter(pool, topicResolver)
 
-	app.relay = Outbox.NewRelay(pool, logger, producer, 100, time.Second)
+	app.relay = Outbox.NewRelay(pool, producer, logger, 100, time.Second)
 
 	orderRepo := orderPG.NewOrderRepo(pool)
 
