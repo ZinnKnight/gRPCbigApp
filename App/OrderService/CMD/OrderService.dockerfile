@@ -5,7 +5,7 @@ RUN go mod download
 
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" \
-    -o /bin/order-service ./App/OrderService/CMD
+    -o /bin/order-service ./App/OrderService/CMD/
 
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates tzdata

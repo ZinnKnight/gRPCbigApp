@@ -12,8 +12,10 @@ func init() {
 	RegisterError(clientErr.ErrEmptyPassword, Invalid, "Пароль не может быть пустым")
 	RegisterError(clientErr.ErrUserNotFound, NotFound, "Такого пользователя не существует")
 	RegisterError(clientErr.ErrUserAlreadyExists, AlreadyExists, "Такой пользователь уже существует")
+	RegisterError(clientErr.ErrTooManyLoginAttempts, RateLimited, "Достигнут лимит попыток входа")
 
 	RegisterError(orderErr.ErrOrderNotFound, NotFound, "Такого заказа не существует")
+	RegisterError(orderErr.ErrOrderQuotaExceeded, RateLimited, "Достигнут лимит по заказам")
 	RegisterError(orderErr.ErrInvalidUserID, Invalid, "Некорректный идентификатор пользователя")
 	RegisterError(orderErr.ErrInvalidMarketID, Invalid, "Некорректный идентификатор магазина")
 	RegisterError(orderErr.ErrInvalidPrice, Invalid, "Некорректная цена заказа")

@@ -6,7 +6,7 @@ RUN go mod download
 
 COPY . .
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" \
-    -o /bin/market-service ./App/SpotInstrumentService/CMD
+    -o /bin/market-service ./App/SpotInstrumentService/CMD/
 
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates tzdata
