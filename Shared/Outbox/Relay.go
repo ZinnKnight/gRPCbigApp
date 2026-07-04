@@ -18,10 +18,10 @@ type Relay struct {
 	interval  time.Duration
 }
 
-func NewRelay(pool *pgxpool.Pool, logger LoggerPorts.Logger, producer *Kafka.Producer, butchsize int, interval time.Duration) *Relay {
+func NewRelay(pool *pgxpool.Pool, producer *Kafka.Producer, logger LoggerPorts.Logger, butchSize int, interval time.Duration) *Relay {
 
-	if butchsize <= 0 {
-		butchsize = 100
+	if butchSize <= 0 {
+		butchSize = 100
 	}
 
 	if interval <= 0 {
@@ -32,7 +32,7 @@ func NewRelay(pool *pgxpool.Pool, logger LoggerPorts.Logger, producer *Kafka.Pro
 		pool:      pool,
 		producer:  producer,
 		logger:    logger,
-		batchSize: butchsize,
+		batchSize: butchSize,
 		interval:  interval,
 	}
 }

@@ -10,14 +10,21 @@ import (
 	authInterceptor "gRPCbigapp/Shared/Auth/AuthInterceptor"
 	"gRPCbigapp/Shared/Config"
 	"gRPCbigapp/Shared/ErrorInterceptor"
+	"gRPCbigapp/Shared/Events"
+	"gRPCbigapp/Shared/Idempotentor"
+	"gRPCbigapp/Shared/Kafka"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	Metrics2 "gRPCbigapp/Shared/Metrics"
+	"gRPCbigapp/Shared/Outbox"
 	"gRPCbigapp/Shared/PanicInterceptor"
 	pgPool "gRPCbigapp/Shared/Postgres"
 	RateLimiter2 "gRPCbigapp/Shared/RateLimiter"
 	redisClient "gRPCbigapp/Shared/Redis"
+	"gRPCbigapp/Shared/SagaMessages"
+	"gRPCbigapp/Shared/SagaSubs"
 	tracing "gRPCbigapp/Shared/Tracing"
 	otlpexporter "gRPCbigapp/Shared/Tracing/OPTLExp"
+	"gRPCbigapp/Shared/Txmanager"
 	"gRPCbigapp/Shared/ValidationIntercepter"
 	"net"
 	"net/http"
@@ -37,6 +44,10 @@ type App struct {
 
 	pool          *pgxpool.Pool
 	rdb           *redisClient.RedisClient
+	producer      *Kafka.Producer
+	relay         *Outbox.Relay
+	cmdConsumer   *Kafka.Consumer
+	subscriber    *SagaSubs.SagaSub
 	grpcServer    *grpc.Server
 	listen        net.Listener
 	metricsHandle http.Handler
@@ -97,9 +108,50 @@ func New(ctx context.Context, cfg *Config.Config, logger LoggerPorts.Logger) (*A
 	}
 	app.rdb = rdb
 
+	producer, err := Kafka.NewProducer(ctx, Kafka.Config{
+		Brokers:  cfg.KafkaBrokers,
+		ClientID: cfg.ServiceName,
+	})
+	if err != nil {
+		app.rdb.Close()
+		app.pool.Close()
+		_ = app.tracingShutDown(ctx)
+		return nil, fmt.Errorf("marketApp, producer.New: %w", err)
+	}
+	app.producer = producer
+
+	txManager := Txmanager.NewTxManager(pool)
+
 	marketRepo := marketPG.NewSISMarketRepo(pool)
 	merketUseCase := marketUC.NewSISUseCase(marketRepo, logger)
 	marketHandler := marketGRPC.NewSISgrpcHandler(merketUseCase, logger)
+
+	replyResolve := func(e Events.Events) string {
+		switch e.EventType {
+		case SagaMessages.EventStockReserved, SagaMessages.EventStockRejected:
+			return SagaMessages.TopicSagaReplies
+		default:
+			return e.AggregationType + ".events"
+		}
+	}
+	replyWriter := Outbox.NewWriter(pool, replyResolve)
+	app.relay = Outbox.NewRelay(pool, producer, logger, 100, time.Second)
+
+	app.subscriber = SagaSubs.NewSagaSub(marketRepo, txManager, replyWriter, Idempotentor.NewGuard(pool, "market-reserv"), logger)
+
+	cmdConsume, err := Kafka.NewConsumer(ctx, Kafka.ConsumerConfig{
+		Brokers: cfg.KafkaBrokers,
+		Group:   "market-reserve",
+		Topics:  []string{SagaMessages.TopicSagaCommands},
+	}, logger)
+	if err != nil {
+		app.producer.Close()
+		app.rdb.Close()
+		app.pool.Close()
+		_ = app.tracingShutDown(ctx)
+		return nil, fmt.Errorf("marketApp, cmdConsume: %w", err)
+	}
+	app.cmdConsumer = cmdConsume
 
 	limit := RateLimiter2.NewRateLimiter(rdb.Client, cfg.RateLimitPerMin, time.Minute)
 
@@ -121,6 +173,8 @@ func New(ctx context.Context, cfg *Config.Config, logger LoggerPorts.Logger) (*A
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.GRPCPort))
 	if err != nil {
+		app.cmdConsumer.Close()
+		app.producer.Close()
 		app.rdb.Close()
 		app.pool.Close()
 		_ = app.tracingShutDown(ctx)
@@ -147,6 +201,13 @@ func (app *App) shutDown() {
 		<-stopChan
 	}
 
+	if app.cmdConsumer != nil {
+		app.cmdConsumer.Close()
+	}
+	if app.producer != nil {
+		app.producer.Close()
+	}
+
 	app.pool.Close()
 	if err := app.rdb.Close(); err != nil {
 		app.logger.LogError("marketApp, redis stoped", LoggerPorts.Field{Key: "error", Value: err.Error()})
@@ -168,6 +229,9 @@ func (app *App) Run(ctx context.Context) error {
 			app.logger.LogError("marketApp metrics", LoggerPorts.Field{Key: "error", Value: err.Error()})
 		}
 	}()
+
+	go app.relay.Run(workerCtx)
+	go app.cmdConsumer.Run(workerCtx, app.subscriber.HandleReservedStock)
 
 	servErrChan := make(chan error, 1)
 

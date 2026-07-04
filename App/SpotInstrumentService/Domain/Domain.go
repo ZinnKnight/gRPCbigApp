@@ -13,6 +13,13 @@ type MarketDomain struct {
 	TTL           *time.Time
 }
 
+// по хорошему в дальнейшем нужен будет отдельный домен под сагу, где будут собраны все интерфейсы, но пока что ошибки тут
+
+const (
+	ReservationReserved = "RESERVED"
+	ReservationRejected = "REJECTED"
+)
+
 var (
 	ErrMarketNotFound = errors.New("market not found")
 )

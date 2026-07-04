@@ -25,7 +25,7 @@ type Config struct {
 	DBMaxConnTTL   int
 	DBMaxConnIdTTL int
 
-	//егерь
+	// егерь
 	ServiceName           string
 	ServiceVersion        string
 	Environment           string
