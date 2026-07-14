@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"gRPCbigapp/App/OrderService/Domain"
+	"gRPCbigapp/OrderService/Domain"
+	"gRPCbigapp/OrderService/Txmanager"
 	"gRPCbigapp/Shared/Events"
 	"gRPCbigapp/Shared/Idempotentor"
 	"gRPCbigapp/Shared/Kafka"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	"gRPCbigapp/Shared/SagaMessages"
-	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/google/uuid"
 )
@@ -41,6 +41,8 @@ func NewOrchestrator(repo orderStatusRepository,
 		logger:      logger,
 	}
 }
+
+//
 
 func (o *Orchestrator) Handle(ctx context.Context, event Kafka.Message) error {
 	switch event.Header["event_type"] {

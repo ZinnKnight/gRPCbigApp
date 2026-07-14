@@ -3,9 +3,9 @@ package Outbox
 import (
 	"context"
 	"fmt"
+	"gRPCbigapp/OrderService/Txmanager"
 	"gRPCbigapp/Shared/Events"
 	tracing "gRPCbigapp/Shared/Tracing"
-	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"

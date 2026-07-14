@@ -2,7 +2,7 @@ package Policy
 
 import (
 	"fmt"
-	"gRPCbigapp/Shared/Auth/AuthRoles"
+	"gRPCbigapp/ClientService/Auth/AuthRoles"
 	"time"
 )
 

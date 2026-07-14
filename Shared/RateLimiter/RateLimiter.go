@@ -12,6 +12,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+// todo убрать скрипт lua, и переделать ratelimiter
+
 var tracer = tracing.Tracer("ratelimiter.redis")
 
 var slidingWindowScript = redis.NewScript(

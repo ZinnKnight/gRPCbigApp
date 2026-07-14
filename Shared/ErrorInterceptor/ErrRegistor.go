@@ -1,9 +1,9 @@
 package ErrorInterceptor
 
 import (
-	clientErr "gRPCbigapp/App/ClientService/Domain"
-	orderErr "gRPCbigapp/App/OrderService/Domain"
-	spotIntsrumentErr "gRPCbigapp/App/SpotInstrumentService/Domain"
+	clientErr "gRPCbigapp/ClientService/Domain"
+	orderErr "gRPCbigapp/OrderService/Domain"
+	spotIntsrumentErr "gRPCbigapp/SpotInstrumentService/Domain"
 )
 
 func init() {

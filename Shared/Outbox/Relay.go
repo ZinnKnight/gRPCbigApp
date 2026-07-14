@@ -18,6 +18,8 @@ type Relay struct {
 	interval  time.Duration
 }
 
+// todo поправить rollback
+
 func NewRelay(pool *pgxpool.Pool, producer *Kafka.Producer, logger LoggerPorts.Logger, butchSize int, interval time.Duration) *Relay {
 
 	if butchSize <= 0 {
