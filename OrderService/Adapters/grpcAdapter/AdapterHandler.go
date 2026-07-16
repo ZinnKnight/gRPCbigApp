@@ -2,17 +2,20 @@ package grpcAdapter
 
 import (
 	"context"
-	"gRPCbigapp/ClientService/Auth/AuthCTX"
 	"gRPCbigapp/OrderService/Domain"
 	"gRPCbigapp/OrderService/Ports"
 	"gRPCbigapp/OrderService/Streaming"
 	"gRPCbigapp/Proto/protoPB"
+	"gRPCbigapp/Shared/AuthShared/AuthCTX"
 	moneyconverter "gRPCbigapp/Shared/Converters/Money"
 	"gRPCbigapp/Shared/ErrorInterceptor"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 )
 
-// todo пересмотреть, сейчас не гексагоналка
+var ErrUnauthenticated = ErrorInterceptor.GRPCConnector(
+	ErrorInterceptor.NewError(ErrorInterceptor.Unauthenticated,
+		"Требуется авторизация",
+		nil))
 
 type OrderHandler struct {
 	protoPB.UnimplementedOrderServiceServer
@@ -28,8 +31,6 @@ func NewOrderHandler(log LoggerPorts.Logger, osp Ports.OSInboundPort, hub *Strea
 		hub:     hub,
 	}
 }
-
-// сразу просматриваем статусы/конвертеры из pb.proto
 
 func pbProtoStatuses(status Domain.OrderStatus) protoPB.OrderStatus {
 	if val, ok := protoPB.OrderStatus_value[string(status)]; ok {
@@ -63,7 +64,7 @@ func (o *OrderHandler) CreateOrder(ctx context.Context, req *protoPB.CreateOrder
 		return nil, ErrorInterceptor.NewError(ErrorInterceptor.Invalid, "Некорректная сумма заказа", err)
 	}
 
-	cmd := Ports.CreteOrder{
+	cmd := Domain.CreteOrder{
 		UserID:   user.UserID,
 		MarketID: req.GetMarketId(),
 		Price:    price,
@@ -157,6 +158,10 @@ func (o *OrderHandler) StreamOrderUpdates(req *protoPB.StreamOrderRequest, strea
 			firstSend = false
 		}
 		return order.OrderStatus.IsTerminal(), nil
+	}
+
+	if terminal, err := send(); err != nil || terminal {
+		return err
 	}
 
 	for {

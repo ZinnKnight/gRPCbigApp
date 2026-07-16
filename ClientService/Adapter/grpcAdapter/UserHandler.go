@@ -2,11 +2,11 @@ package grpcAdapter
 
 import (
 	"context"
-	"gRPCbigapp/ClientService/Auth/AuthAdapter"
-	"gRPCbigapp/ClientService/Auth/AuthCTX"
 	"gRPCbigapp/ClientService/Domain"
 	"gRPCbigapp/ClientService/Ports"
 	"gRPCbigapp/Proto/protoPB"
+	"gRPCbigapp/Shared/AuthShared/AuthAdapter"
+	"gRPCbigapp/Shared/AuthShared/AuthCTX"
 	"gRPCbigapp/Shared/ErrorInterceptor"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 

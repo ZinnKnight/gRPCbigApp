@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"gRPCbigapp/OrderService/Domain"
 	"gRPCbigapp/OrderService/Ports"
-	"gRPCbigapp/OrderService/Txmanager"
 	tracing "gRPCbigapp/Shared/Tracing"
+	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"

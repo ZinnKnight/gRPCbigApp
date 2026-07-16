@@ -8,6 +8,9 @@ type UserAuth struct {
 	UserPlan string
 }
 
+// Тут тянем OrderService, можно часть логики снести туда, тогда будет крассзависимость
+
+// в метадату
 type contextKey struct{}
 
 func PutUser(ctx context.Context, user *UserAuth) context.Context {

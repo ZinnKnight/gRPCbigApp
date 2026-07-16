@@ -3,7 +3,7 @@ package Idempotentor
 import (
 	"context"
 	"fmt"
-	"gRPCbigapp/OrderService/Txmanager"
+	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"

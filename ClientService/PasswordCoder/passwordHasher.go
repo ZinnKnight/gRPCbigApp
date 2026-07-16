@@ -1,4 +1,4 @@
-package ValidationIntercepter
+package PasswordCoder
 
 import "golang.org/x/crypto/bcrypt"
 

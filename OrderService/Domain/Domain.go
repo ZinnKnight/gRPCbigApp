@@ -17,7 +17,13 @@ type OrderDomain struct {
 	OrderStatus OrderStatus
 	CreatedAt   time.Time
 }
-
+type CreteOrder struct {
+	UserID   string
+	MarketID string
+	Price    decimal.Decimal
+	Quantity decimal.Decimal
+	UserPlan string
+}
 type OrderStatus string
 
 const (
@@ -67,5 +73,3 @@ func NewOrder(userID, marketID string, price, amount decimal.Decimal) (*OrderDom
 		CreatedAt:   time.Now(),
 	}, nil
 }
-
-// todo пересмотреть логику и архитектуру (сейчас не гексагоналка)

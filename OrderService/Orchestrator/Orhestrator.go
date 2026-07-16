@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"gRPCbigapp/OrderService/Domain"
-	"gRPCbigapp/OrderService/Txmanager"
 	"gRPCbigapp/Shared/Events"
 	"gRPCbigapp/Shared/Idempotentor"
 	"gRPCbigapp/Shared/Kafka"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	"gRPCbigapp/Shared/SagaMessages"
+	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/google/uuid"
 )
@@ -42,18 +42,18 @@ func NewOrchestrator(repo orderStatusRepository,
 	}
 }
 
-//
-
 func (o *Orchestrator) Handle(ctx context.Context, event Kafka.Message) error {
 	switch event.Header["event_type"] {
 	case SagaMessages.EventOrderCreated:
 		return o.handleOrderCreated(ctx, event)
+	case SagaMessages.EventStockReserved:
+		return o.handleReplay(ctx, event, true)
+	case SagaMessages.EventStockRejected:
+		return o.handleReplay(ctx, event, false)
 	default:
 		return nil
 	}
 }
-
-// подача заказа
 
 func (o *Orchestrator) handleOrderCreated(ctx context.Context, message Kafka.Message) error {
 	idempotencyKey := message.Header["idempotency_key"]
@@ -101,9 +101,6 @@ func (o *Orchestrator) handleOrderCreated(ctx context.Context, message Kafka.Mes
 	})
 }
 
-// откат
-// т.к, по факту откатывать и нечего, прокидываем reject и всё
-
 func (o *Orchestrator) handleReplay(ctx context.Context, msg Kafka.Message, reserved bool) error {
 	idempotencyKey := msg.Header["idempotency_key"]
 	if idempotencyKey == "" {
@@ -116,7 +113,7 @@ func (o *Orchestrator) handleReplay(ctx context.Context, msg Kafka.Message, rese
 	}
 
 	newStatus := string(Domain.StatusReserved)
-	if reserved {
+	if !reserved {
 		newStatus = string(Domain.StatusRejected)
 	}
 
@@ -155,8 +152,6 @@ func (o *Orchestrator) handleReplay(ctx context.Context, msg Kafka.Message, rese
 		})
 	})
 }
-
-// order_id из тела
 
 func (o *Orchestrator) orderIDFromReply(message Kafka.Message, reserved bool) (string, bool) {
 	if reserved {

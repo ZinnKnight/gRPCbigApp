@@ -2,8 +2,8 @@ package AuthInterceptor
 
 import (
 	"context"
-	"gRPCbigapp/ClientService/Auth/AuthCTX"
-	"gRPCbigapp/ClientService/Auth/AuthClaims"
+	"gRPCbigapp/Shared/AuthShared/AuthCTX"
+	"gRPCbigapp/Shared/AuthShared/AuthClaims"
 	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -23,6 +23,9 @@ var publicMethods = map[string]bool{
 	registration: true,
 	login:        true,
 }
+
+// тут тянем SpotInstrumentService, до этого ещё часть тянули в OrderService, если без этих частей,
+//весь Auth можно запихать в ClientService
 
 func AuthInterceptor(jwtSecretKey []byte) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context,

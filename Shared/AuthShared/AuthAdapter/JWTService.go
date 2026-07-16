@@ -1,11 +1,14 @@
 package AuthAdapter
 
 import (
-	"gRPCbigapp/ClientService/Auth/AuthClaims"
+	"gRPCbigapp/Shared/AuthShared/AuthClaims"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
+
+// можно вот эту фигню запихать в Client Service без последствий и смерджить с Policy если потребуется
+// Но всё остальное тогда останется
 
 type JWTService struct {
 	secretKey []byte

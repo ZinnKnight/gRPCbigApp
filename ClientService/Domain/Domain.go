@@ -2,7 +2,7 @@ package Domain
 
 import (
 	"errors"
-	"gRPCbigapp/ClientService/Auth/AuthRoles"
+	"gRPCbigapp/Shared/AuthShared/AuthRoles"
 )
 
 const (

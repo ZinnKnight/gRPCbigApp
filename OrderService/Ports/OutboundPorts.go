@@ -5,8 +5,6 @@ import (
 	"gRPCbigapp/OrderService/Domain"
 )
 
-// todo переместить в domain
-
 type OSOutboundPorts interface {
 	SaveOrder(ctx context.Context, order *Domain.OrderDomain) error
 	FindByID(ctx context.Context, orderID, userID string) (*Domain.OrderDomain, error)

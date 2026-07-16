@@ -3,18 +3,19 @@ package Txmanager
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+const rollBackTimeOut = time.Second * 5
 
 type txKey struct{}
 
 type TxManager struct {
 	pool *pgxpool.Pool
 }
-
-// todo поправить rollback
 
 func NewTxManager(pool *pgxpool.Pool) *TxManager {
 	return &TxManager{pool: pool}
@@ -30,7 +31,11 @@ func (txm *TxManager) Do(ctx context.Context, fn func(ctx context.Context) error
 
 	txCtx := context.WithValue(ctx, txKey{}, tx)
 
-	defer func() { _ = tx.Rollback(txCtx) }()
+	defer func() {
+		rbCTX, cancel := context.WithTimeout(context.Background(), rollBackTimeOut)
+		defer cancel()
+		_ = tx.Rollback(rbCTX)
+	}()
 
 	if err := fn(txCtx); err != nil {
 		return err

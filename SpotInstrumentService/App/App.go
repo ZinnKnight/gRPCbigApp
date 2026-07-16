@@ -3,9 +3,8 @@ package App
 import (
 	"context"
 	"fmt"
-	authInterceptor "gRPCbigapp/ClientService/Auth/AuthInterceptor"
-	"gRPCbigapp/OrderService/Txmanager"
 	"gRPCbigapp/Proto/protoPB"
+	authInterceptor "gRPCbigapp/Shared/AuthShared/AuthInterceptor"
 	"gRPCbigapp/Shared/Config"
 	"gRPCbigapp/Shared/ErrorInterceptor"
 	"gRPCbigapp/Shared/Events"
@@ -21,6 +20,7 @@ import (
 	"gRPCbigapp/Shared/SagaMessages"
 	tracing "gRPCbigapp/Shared/Tracing"
 	otlpexporter "gRPCbigapp/Shared/Tracing/OPTLExp"
+	"gRPCbigapp/Shared/Txmanager"
 	"gRPCbigapp/Shared/ValidationIntercepter"
 	marketPG "gRPCbigapp/SpotInstrumentService/Adapters/Postgres"
 	marketGRPC "gRPCbigapp/SpotInstrumentService/Adapters/grpcAdapter"

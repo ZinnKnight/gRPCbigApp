@@ -18,8 +18,6 @@ const (
 	EventOrderStatusChanged = "OrderStatusChanged"
 )
 
-// управляющие пути и для внутреннего пользования и для выкидки наружу
-
 type OrderCreatedPayload struct {
 	OrderID  string `json:"order_id"`
 	UserID   string `json:"user_id"`

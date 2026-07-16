@@ -2,8 +2,6 @@ package AuthRoles
 
 type Plan string
 
-// в дальнейшем сделаю возможность динамической смены ролей, но пока так
-
 const (
 	Free  Plan = "free"
 	Pro   Plan = "pro"

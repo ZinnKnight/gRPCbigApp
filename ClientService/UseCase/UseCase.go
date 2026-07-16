@@ -5,14 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"gRPCbigapp/ClientService/Domain"
+	"gRPCbigapp/ClientService/PasswordCoder"
 	Ports2 "gRPCbigapp/ClientService/Ports"
-	"gRPCbigapp/OrderService/Txmanager"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	"gRPCbigapp/Shared/Outbox"
 	"gRPCbigapp/Shared/Policy"
 	"gRPCbigapp/Shared/Quota"
 	tracing "gRPCbigapp/Shared/Tracing"
-	"gRPCbigapp/Shared/ValidationIntercepter"
+	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel/attribute"
@@ -82,7 +82,7 @@ func (us *UserUseCase) UserRegistration(ctx context.Context, rui Ports2.Register
 	}
 	span.SetAttributes(attribute.String("user.id", user.UserID))
 
-	hashedPassword, err := ValidationIntercepter.Hash(user.UserPassword)
+	hashedPassword, err := PasswordCoder.Hash(user.UserPassword)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "client_service.RegisterUser failed: invalid password hash")
@@ -141,7 +141,7 @@ func (us *UserUseCase) UserLogin(ctx context.Context, userName, userPassword str
 		span.SetStatus(codes.Error, "usecase.GetUser failed")
 		return nil, fmt.Errorf("usecase, logging user: %w", err)
 	}
-	if err := ValidationIntercepter.Verify(user.UserPassword, userPassword); err != nil {
+	if err := PasswordCoder.Verify(user.UserPassword, userPassword); err != nil {
 		span.SetStatus(codes.Error, "usecase.VerifyUser incorrect credentials")
 		return nil, Domain.ErrIncorrectCredentials
 	}

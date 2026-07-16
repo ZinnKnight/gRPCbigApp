@@ -2,9 +2,17 @@ package Policy
 
 import (
 	"fmt"
-	"gRPCbigapp/ClientService/Auth/AuthRoles"
+	"gRPCbigapp/Shared/AuthShared/AuthRoles"
 	"time"
 )
+
+// по факту мы тянем зависимости от Policy в Quota и UseCase, в целом - можно смерджить, но тогда будет куча всякого в одной куче
+// Даже если часть снести в домен, получится слегка переизбыточная логика (хотя хз зачем это надо)
+// И то есть, формально, если мы перенесём весь Policy в Client или ещё куда, мы по идее убёем логику не сильно зависимых сервисов
+// друг от друга.
+// Ну и офк, если мы сложимся в Client, то везде сложимся т.к от туда всё тянуть будем
+
+// перенести в метадату grpc
 
 type Action string
 
@@ -23,8 +31,6 @@ var Unlimited = Rule{Limit: 0}
 type Provider interface {
 	RuleFor(plan string, action Action) Rule
 }
-
-// пока хардкод, позже уберу в конфиг
 
 type StaticProvider struct {
 	rules map[AuthRoles.Plan]map[Action]Rule

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"gRPCbigapp/OrderService/Domain"
 	Ports2 "gRPCbigapp/OrderService/Ports"
-	"gRPCbigapp/OrderService/Txmanager"
 	"gRPCbigapp/Shared/Events"
 	"gRPCbigapp/Shared/Logger/LoggerPorts"
 	"gRPCbigapp/Shared/Policy"
 	"gRPCbigapp/Shared/Quota"
 	tracing "gRPCbigapp/Shared/Tracing"
+	"gRPCbigapp/Shared/Txmanager"
 
 	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"

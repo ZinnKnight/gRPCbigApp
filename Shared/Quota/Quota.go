@@ -13,6 +13,8 @@ type Decision struct {
 	RetryAfter time.Duration
 }
 
+// перенести в метадату
+
 type Enforced struct {
 	provider Policy.Provider
 	limiter  *RateLimiter2.Limiter
